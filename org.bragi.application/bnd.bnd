@@ -1,0 +1,34 @@
+#
+#  APPLICATION
+#
+
+Bundle-Version: 1.0.0
+Bundle-Description: \
+	This is the  bundle. It carries the configuration for an application \
+	and provides some basic very much application specific stuff.  It provides a button \
+	that calls a REST function that turns a text into upper case. \
+	\
+	${warning;Please update this Bundle-Description in org.bragi.application/bnd.bnd}
+
+Private-Package: \
+	org.bragi.player.helpers,\
+	org.bragi.player.model,\
+	org.bragi.player.statemachines,\
+	org.bragi.player.viewers,\
+	org.bragi.player.widgets,\
+	org.bragi.player.window,\
+	swing2swt.layout,\
+	org.bragi.player.dnd
+	
+-includeresource: \
+	{readme.md}
+
+-buildpath: \
+	osgi.enroute.base.api,\
+	org.eclipse.swt,\
+	org.eclipse.swt.gtk.linux.x86_64,\
+	org.eclipse.jface,\
+	org.bragi.api;version=latest,\
+	org.eclipse.core.commands,\
+	org.apache.felix.framework;version=4.6.0
+	

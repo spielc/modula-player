@@ -1,0 +1,31 @@
+#
+#  BUNDLE 
+#
+
+
+Bundle-Version: 1.0.0
+Bundle-Description: 				\
+	A bundle with a provider. Notice that this provider exports the API package. \
+	It also provides a JUnit test and it can be run standalone. \
+	\
+	${warning;Please update this Bundle-Description in org.bragi.metadata.jaudiotagger.provider/bnd.bnd}
+
+	
+-buildpath:  \
+	osgi.enroute.base.api;version=1.0,\
+	biz.aQute.junit,\
+	org.bragi.api;version=latest,\
+	jaudiotagger-2.0.3
+
+
+-includeresource: {readme.md}
+
+
+-runrequires:  \
+	osgi.identity;filter:='(osgi.identity=org.bragi.metadata.jaudiotagger.provider)'
+	
+-runbundles: \
+	${error;Resolve first}
+Private-Package:  \
+	org.bragi.jaudiotagger
+Export-Package: org.bragi.metadata

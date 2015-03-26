@@ -1,0 +1,37 @@
+#
+#  BUNDLE 
+#
+
+
+Bundle-Version: 1.0.0
+Bundle-Description: 				\
+	A bundle with a provider. Notice that this provider exports the API package. \
+	It also provides a JUnit test and it can be run standalone. \
+	\
+	${warning;Please update this Bundle-Description in org.bragi.indexer.lucene.provider/bnd.bnd}
+
+Private-Package: \
+	org.bragi.LuceneIndexer,\
+	org.bragi.LuceneIndexer.configuration,\
+	org.bragi.LuceneIndexer.internal
+	
+-buildpath: \
+	osgi.enroute.base.api;version=1.0,\
+	biz.aQute.junit,\
+	org.bragi.api;version=latest,\
+	org.mockito.mockito-all;version=2.0.2.beta,\
+	org.apache.servicemix.bundles.lucene;version=4.10.2.1,\
+	org.apache.servicemix.bundles.lucene-queryparser;version=4.10.2.1,\
+	org.apache.servicemix.bundles.lucene-analyzers-common;version=4.10.2.1
+
+-includeresource: {readme.md}
+
+
+-runrequires:  \
+	osgi.identity;filter:='(osgi.identity=org.bragi.indexer.lucene.provider)'
+	
+-runbundles: \
+	${error;Resolve first}
+Export-Package: \
+	org.bragi.indexer,\
+	org.bragi.metadata

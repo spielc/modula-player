@@ -1,0 +1,25 @@
+#
+# 
+#
+
+Bundle-Version: 1.0.0
+Bundle-Description: 				\
+	This is  project. An API project should in general not contain any \
+	implementation code.\
+	\
+	${warning;Please update this Bundle-Description in org.bragi.api/bnd.bnd}
+
+	
+Export-Package:  \
+	org.bragi.collection,\
+	org.bragi.engine,\
+	org.bragi.indexer,\
+	org.bragi.metadata,\
+	org.bragi.playlist
+
+
+Require-Capability: \
+	compile-only
+
+-buildpath: osgi.enroute.base.api;version=1.0
+Bundle-License: LGPLv3
