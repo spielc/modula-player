@@ -25,25 +25,17 @@ import org.bragi.metadata.MetaDataProviderInterface;
 import org.osgi.service.component.annotations.ConfigurationPolicy;
 import org.osgi.service.component.annotations.Modified;
 
-import osgi.enroute.dto.api.DTOs;
-
 
 /**
  * @author christoph
  *
  */
-@org.osgi.service.component.annotations.Component(configurationPolicy=ConfigurationPolicy.REQUIRE, property="service.ranking=1")
+@org.osgi.service.component.annotations.Component(name="org.bragi.LuceneIndexer.RAMBasedLuceneIndexer", configurationPolicy=ConfigurationPolicy.REQUIRE, property="service.ranking=1")
 public class RAMBasedLuceneIndexer implements IndexerInterface {
 	
-	interface Config {
-		int port();
-		String host();
-	}
-	
-	private static final String SERVICE_PID = "service.pid";
+	//private static final String SERVICE_PID = "service.pid";
 	private LuceneIndexer indexer;
 	private String pid;
-	
 	
 	public RAMBasedLuceneIndexer() {
 		indexer=new LuceneIndexer(new RAMDirectory());
@@ -52,20 +44,20 @@ public class RAMBasedLuceneIndexer implements IndexerInterface {
 	
 	@org.osgi.service.component.annotations.Activate
 	public void activate(Map<String,Object> props) {
-		pid=props.get(SERVICE_PID).toString();
+		modified(props);
 	}
 	
 	@Modified
-	void modified(Map<String,Object> map) {
-//		Config config = dtos.convert(map).to( Config.class );
-//		System.out.println("Configuration " + config.host()+":"+config.port());
+	public void modified(Map<String,Object> map) {
 	}
 	
 		
+	@Override
 	@org.osgi.service.component.annotations.Reference
 	public void setMetaDataProvider(MetaDataProviderInterface pMetaDataProvider) {
 		indexer.setMetaDataProvider(pMetaDataProvider);
 	}
+	@Override
 	public void unsetMetaDataProvider(MetaDataProviderInterface pMetaDataProvider) {
 		indexer.setMetaDataProvider(null);
 	}
