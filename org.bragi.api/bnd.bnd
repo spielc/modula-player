@@ -10,12 +10,6 @@ Bundle-Description: 				\
 	${warning;Please update this Bundle-Description in org.bragi.api/bnd.bnd}
 
 	
-Export-Package:  \
-	org.bragi.collection,\
-	org.bragi.engine,\
-	org.bragi.indexer,\
-	org.bragi.metadata,\
-	org.bragi.playlist
 
 
 Require-Capability: \
@@ -23,3 +17,9 @@ Require-Capability: \
 
 -buildpath: osgi.enroute.base.api;version=1.0
 Bundle-License: LGPLv3
+Export-Package:  \
+	org.bragi.collection,\
+	org.bragi.engine,\
+	org.bragi.indexer,\
+	org.bragi.metadata,\
+	org.bragi.playlist

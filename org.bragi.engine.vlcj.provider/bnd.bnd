@@ -20,7 +20,7 @@ Private-Package: \
 	org.mockito.mockito-all;version=2.0.2.beta,\
 	vlcj-2.4.1,\
 	org.bragi.api,\
-	com.sun.jna;version=3.5.2
+	com.sun.jna;version=3.0
 
 -includeresource: {readme.md}
 
@@ -30,4 +30,6 @@ Private-Package: \
 	
 -runbundles: \
 	${error;Resolve first}
-Export-Package: org.bragi.engine
+#Export-Package: org.bragi.engine
+Export-Package:  \
+	org.bragi.engine

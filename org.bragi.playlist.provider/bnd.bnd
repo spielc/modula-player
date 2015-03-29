@@ -26,7 +26,5 @@ Bundle-Description: This bundle contains an implementation of the PlaylistInterf
 -runbundles: \
 	${error;Resolve first}
 Private-Package: org.bragi.playlist.impl
-Export-Package: \
-	org.bragi.indexer,\
-	org.bragi.metadata,\
+Export-Package:  \
 	org.bragi.playlist

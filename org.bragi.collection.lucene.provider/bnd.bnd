@@ -28,7 +28,5 @@ Private-Package: \
 	
 -runbundles: \
 	${error;Resolve first}
-Export-Package: \
-	org.bragi.collection,\
-	org.bragi.indexer,\
-	org.bragi.metadata
+Export-Package:  \
+	org.bragi.collection
