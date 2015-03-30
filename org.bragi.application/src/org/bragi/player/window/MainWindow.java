@@ -556,6 +556,8 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 	@Override
 	public void stateChange(EngineStateEnum currentState, String engineEvent,
 			EngineStateEnum newState, Object... eventData) {
+		if (seekWidget==null)
+			return;
 		if (newState == EngineStateEnum.PLAYING) {
 			if (engineEvent.equals(EngineInterface.BACKWARD_EVENT) || engineEvent.equals(EngineInterface.FORWARD_EVENT) || engineEvent.equals(EngineInterface.JUMP_EVENT))
 				currentSongIndex = (int) eventData[0];
