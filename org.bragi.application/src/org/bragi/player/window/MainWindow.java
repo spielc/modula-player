@@ -3,6 +3,9 @@ package org.bragi.player.window;
 import java.io.File;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.Iterator;
@@ -141,7 +144,11 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 				mainWindow.open();
 				Display.getCurrent().dispose();
 				if (playlist!=null) {
-					playlist.save("file:///home/christoph/.bragi/Playlist/current.m3u");
+					Path dirPath=Paths.get("/home/christoph/.bragi/Playlist/");
+					if (!Files.exists(dirPath))
+						Files.createDirectory(dirPath);
+					Path playlistPath=dirPath.resolve("current.m3u");
+					playlist.save(playlistPath.toUri().toString());
 				}
 				System.exit(0);
 			} catch (Exception e) {
@@ -187,7 +194,8 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 		if (playlist!=null) {
 			playlist.load("file:///home/christoph/.bragi/Playlist/current.m3u");
 			getShell().getDisplay().asyncExec(new Runnable() {
-			    public void run() {
+			    @Override
+				public void run() {
 					playlistTableViewer.refresh();
 			    }
 			});
@@ -217,7 +225,8 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 		playlist=pPlaylist;
 		if (playlistTableViewer!=null) {
 			getShell().getDisplay().asyncExec(new Runnable() {
-			    public void run() {
+			    @Override
+				public void run() {
 			    	playlistTableViewer.setInput(playlist);
 					playlistTableViewer.refresh();
 			    }
