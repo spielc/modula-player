@@ -22,6 +22,8 @@ import org.bragi.LuceneIndexer.internal.LuceneIndexer;
 import org.bragi.indexer.IndexerInterface;
 import org.bragi.metadata.MetaDataEnum;
 import org.bragi.metadata.MetaDataProviderInterface;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.ConfigurationPolicy;
 import org.osgi.service.component.annotations.Modified;
 
@@ -30,7 +32,7 @@ import org.osgi.service.component.annotations.Modified;
  * @author christoph
  *
  */
-@org.osgi.service.component.annotations.Component(name="org.bragi.LuceneIndexer.RAMBasedLuceneIndexer", configurationPolicy=ConfigurationPolicy.REQUIRE, property="service.ranking=1")
+@Component(name="org.bragi.LuceneIndexer.RAMBasedLuceneIndexer", configurationPolicy=ConfigurationPolicy.REQUIRE, property="service.ranking=1")
 public class RAMBasedLuceneIndexer implements IndexerInterface {
 	
 	//private static final String SERVICE_PID = "service.pid";
@@ -42,7 +44,7 @@ public class RAMBasedLuceneIndexer implements IndexerInterface {
 		pid="";
 	}
 	
-	@org.osgi.service.component.annotations.Activate
+	@Activate
 	public void activate(Map<String,Object> props) {
 		modified(props);
 	}

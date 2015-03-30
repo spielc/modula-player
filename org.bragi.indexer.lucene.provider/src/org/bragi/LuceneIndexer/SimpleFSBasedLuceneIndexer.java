@@ -11,6 +11,7 @@
  */
 package org.bragi.LuceneIndexer;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Hashtable;
@@ -18,14 +19,15 @@ import java.util.Map;
 
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.store.SimpleFSDirectory;
-import org.bragi.LuceneIndexer.configuration.SimpleFSBasedLuceneIndexerConfiguration;
 import org.bragi.LuceneIndexer.internal.LuceneIndexer;
 import org.bragi.indexer.IndexerInterface;
 import org.bragi.metadata.MetaDataEnum;
 import org.bragi.metadata.MetaDataProviderInterface;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.ConfigurationPolicy;
-
-import aQute.bnd.annotation.metatype.Configurable;
+import org.osgi.service.component.annotations.Modified;
+import org.osgi.service.component.annotations.Reference;
 
 
 /**
@@ -36,7 +38,7 @@ import aQute.bnd.annotation.metatype.Configurable;
  * @author christoph
  *
  */
-@org.osgi.service.component.annotations.Component(configurationPolicy=ConfigurationPolicy.REQUIRE, factory="SimpleFSBasedLuceneIndexerConfiguration.class",property="service.ranking=2")
+@Component(name="org.bragi.LuceneIndexer.SimpleFSBasedLuceneIndexer", configurationPolicy=ConfigurationPolicy.REQUIRE, property="service.ranking=2")
 public class SimpleFSBasedLuceneIndexer implements IndexerInterface {
 	
 	private LuceneIndexer indexer;
@@ -54,11 +56,16 @@ public class SimpleFSBasedLuceneIndexer implements IndexerInterface {
 	 * Activates a new instance of this class. Activation is done via 
 	 * @param props
 	 */
-	@org.osgi.service.component.annotations.Activate
+	@Activate
 	public void activate(Map<String,Object> props) {
-		SimpleFSBasedLuceneIndexerConfiguration config = Configurable.createConfigurable(SimpleFSBasedLuceneIndexerConfiguration.class, props);
+		modified(props);
+	}
+	
+	@Modified
+	public void modified(Map<String,Object> props) {
 		try {
-			indexer=new LuceneIndexer(new SimpleFSDirectory(config.path()));
+			File path=new File(props.get("path").toString());
+			indexer=new LuceneIndexer(new SimpleFSDirectory(path));
 			indexer.setMetaDataProvider(metaDataProvider);
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -67,7 +74,7 @@ public class SimpleFSBasedLuceneIndexer implements IndexerInterface {
 	
 		
 	@Override
-	@org.osgi.service.component.annotations.Reference
+	@Reference
 	public void setMetaDataProvider(MetaDataProviderInterface pMetaDataProvider) {
 		if (indexer!=null)
 			indexer.setMetaDataProvider(pMetaDataProvider);
