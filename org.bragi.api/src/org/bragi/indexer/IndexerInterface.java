@@ -55,12 +55,6 @@ public interface IndexerInterface {
 	public Map<URI,Map<MetaDataEnum,String>> filter(String query, MetaDataEnum... metaData) throws Exception;
 	
 	/**
-	 * Returns the id of this instance
-	 * @return the id of the instance as string
-	 */
-	public String getId();
-
-	/**
 	 * 
 	 * @param pMetaDataProvider
 	 */

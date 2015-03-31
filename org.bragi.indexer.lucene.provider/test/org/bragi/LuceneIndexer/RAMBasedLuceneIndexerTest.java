@@ -6,10 +6,8 @@ package org.bragi.LuceneIndexer;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.HashMap;
-import java.util.Map;
 
 import org.apache.lucene.store.AlreadyClosedException;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -30,6 +28,7 @@ public class RAMBasedLuceneIndexerTest extends BaseLuceneIndexerTest {
 	public void initTest() throws URISyntaxException, IOException {
 		indexerComponent=new RAMBasedLuceneIndexer();
 		indexerComponent.setMetaDataProvider(metaDataProvider);
+		indexerComponent.activate(new HashMap<String, Object>());
 	}
 		
 	@Test
@@ -54,24 +53,5 @@ public class RAMBasedLuceneIndexerTest extends BaseLuceneIndexerTest {
 	@Test
 	public void filterTest() throws Exception {
 		filterTest(indexerComponent);
-	}
-
-	@Test(expected=NullPointerException.class)
-	public void activateTest() {
-		Map<String,Object> configData=new HashMap<>();
-		configData.put("service.pid", SERVICE_PID);
-		indexerComponent.activate(configData);
-		Assert.assertEquals(SERVICE_PID, indexerComponent.getId());
-		configData.remove("service.pid");
-		indexerComponent.activate(configData);
-	}
-	
-	@Test
-	public void getIdTest() {
-		Assert.assertTrue(indexerComponent.getId().isEmpty());
-		Map<String,Object> configData=new HashMap<>();
-		configData.put("service.pid", SERVICE_PID);
-		indexerComponent.activate(configData);
-		Assert.assertEquals(SERVICE_PID, indexerComponent.getId());
 	}
 }

@@ -17,7 +17,6 @@ import java.util.Map;
 
 import org.apache.lucene.store.AlreadyClosedException;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -80,7 +79,6 @@ public class SimpleFSBasedLuceneIndexerTest extends BaseLuceneIndexerTest {
 		Map<String,Object> configData=new HashMap<>();
 		configData.put("service.pid", SERVICE_PID);
 		indexerComponent.activate(configData);
-		Assert.assertEquals(SERVICE_PID, indexerComponent.getId());
 		configData.remove("service.pid");
 		indexerComponent.activate(configData);
 	}

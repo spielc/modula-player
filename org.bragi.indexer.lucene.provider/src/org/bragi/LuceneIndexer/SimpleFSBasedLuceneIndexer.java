@@ -42,14 +42,12 @@ import org.osgi.service.component.annotations.Reference;
 public class SimpleFSBasedLuceneIndexer implements IndexerInterface {
 	
 	private LuceneIndexer indexer;
-	private String pid;
 	private MetaDataProviderInterface metaDataProvider;
 	
 	/**
 	 * Constructor
 	 */
 	public SimpleFSBasedLuceneIndexer() {
-		pid="";
 	}
 	
 	/**
@@ -113,11 +111,6 @@ public class SimpleFSBasedLuceneIndexer implements IndexerInterface {
 			indexer.closeIndexWriter();
 	}
 	
-	@Override
-	public String getId() {
-		return pid;
-	}
-
 	@Override
 	public Map<URI, Map<MetaDataEnum, String>> filter(String query,
 			MetaDataEnum... metaData) throws Exception {

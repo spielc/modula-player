@@ -35,13 +35,10 @@ import org.osgi.service.component.annotations.Modified;
 @Component(name="org.bragi.LuceneIndexer.RAMBasedLuceneIndexer", configurationPolicy=ConfigurationPolicy.REQUIRE, property="service.ranking=1")
 public class RAMBasedLuceneIndexer implements IndexerInterface {
 	
-	//private static final String SERVICE_PID = "service.pid";
 	private LuceneIndexer indexer;
-	private String pid;
+	private MetaDataProviderInterface metaDataProvider;
 	
 	public RAMBasedLuceneIndexer() {
-		indexer=new LuceneIndexer(new RAMDirectory());
-		pid="";
 	}
 	
 	@Activate
@@ -51,17 +48,22 @@ public class RAMBasedLuceneIndexer implements IndexerInterface {
 	
 	@Modified
 	public void modified(Map<String,Object> map) {
+		indexer=new LuceneIndexer(new RAMDirectory());
+		indexer.setMetaDataProvider(metaDataProvider);
 	}
 	
 		
 	@Override
 	@org.osgi.service.component.annotations.Reference
 	public void setMetaDataProvider(MetaDataProviderInterface pMetaDataProvider) {
-		indexer.setMetaDataProvider(pMetaDataProvider);
+		if (indexer!=null)
+			indexer.setMetaDataProvider(pMetaDataProvider);
+		metaDataProvider=pMetaDataProvider;
+		
 	}
 	@Override
 	public void unsetMetaDataProvider(MetaDataProviderInterface pMetaDataProvider) {
-		indexer.setMetaDataProvider(null);
+		setMetaDataProvider(null);
 	}
 	
 	/* (non-Javadoc)
@@ -90,11 +92,6 @@ public class RAMBasedLuceneIndexer implements IndexerInterface {
 			indexer.closeIndexWriter();
 	}
 	
-	@Override
-	public String getId() {
-		return pid;
-	}
-
 	@Override
 	public Map<URI, Map<MetaDataEnum, String>> filter(String query,
 			MetaDataEnum... metaData) throws Exception {
