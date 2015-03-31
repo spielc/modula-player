@@ -10,14 +10,12 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.net.URI;
-import java.nio.file.FileSystem;
 import java.nio.file.Path;
 import java.nio.file.StandardWatchEventKinds;
 import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 
 import org.bragi.collection.CollectionInterface;
@@ -59,6 +57,7 @@ public class CollectionChangeHandlerThreadTest {
 		when(indexer.indexUri(MP3_1_URL)).thenReturn(true);
 		when(path1.register(watcher, StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_DELETE, StandardWatchEventKinds.ENTRY_MODIFY)).thenReturn(key1);
 		when(path1.toUri()).thenReturn(URI.create(MP3_1_URL));
+		when(path1.resolve(event1.context())).thenReturn(path1);
 		when(watcher.take()).thenReturn(key1);
 		when(event1.kind()).thenReturn(StandardWatchEventKinds.ENTRY_CREATE);
 		when(event2.kind()).thenReturn(StandardWatchEventKinds.ENTRY_MODIFY);
