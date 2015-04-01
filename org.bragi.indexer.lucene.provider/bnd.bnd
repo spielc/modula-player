@@ -12,7 +12,6 @@ Bundle-Description: 				\
 
 Private-Package: \
 	org.bragi.LuceneIndexer,\
-	org.bragi.LuceneIndexer.configuration,\
 	org.bragi.LuceneIndexer.internal
 	
 -buildpath: \
