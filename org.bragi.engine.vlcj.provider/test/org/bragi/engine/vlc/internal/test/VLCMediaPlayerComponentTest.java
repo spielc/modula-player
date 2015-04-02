@@ -11,8 +11,10 @@ import java.util.Map;
 
 import org.bragi.engine.EngineInterface;
 import org.bragi.engine.vlc.internal.VLCMediaPlayerComponent;
+import org.bragi.engine.vlc.test.helpers.LocalTest;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
 
@@ -24,6 +26,7 @@ import uk.co.caprica.vlcj.player.list.MediaListPlayer;
  * @author christoph
  *
  */
+@Category({LocalTest.class})
 public class VLCMediaPlayerComponentTest {
 	
 	public static final String MP3URL=new FileMrl().file(VLCMediaPlayerComponentTest.class.getClassLoader().getResource("test.mp3").getPath()).value();

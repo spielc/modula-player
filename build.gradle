@@ -28,6 +28,12 @@ subprojects {
   if (bndProject != null) {
     plugins.apply 'biz.aQute.bnd'
   }
+  plugins.apply 'java'
+  test {
+      useJUnit {
+      	excludeCategories 'org.bragi.engine.vlc.test.helpers.LocalTest'
+      }
+  }
 }
 
 task wrapper(type: Wrapper) {

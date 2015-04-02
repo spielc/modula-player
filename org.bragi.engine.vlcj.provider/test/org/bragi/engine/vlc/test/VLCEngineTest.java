@@ -13,9 +13,11 @@ import java.util.Map;
 
 import org.bragi.engine.EngineInterface;
 import org.bragi.engine.vlc.VLCEngine;
+import org.bragi.engine.vlc.test.helpers.LocalTest;
 import org.bragi.playlist.PlaylistInterface;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
 
@@ -25,6 +27,7 @@ import uk.co.caprica.vlcj.mrl.FileMrl;
  * @author christoph
  *
  */
+@Category({LocalTest.class})
 public class VLCEngineTest {
 	
 	public static final String MP3URL=new FileMrl().file(VLCEngineTest.class.getClassLoader().getResource("test.mp3").getPath()).value();
@@ -116,7 +119,7 @@ public class VLCEngineTest {
 			Thread.sleep(1000);
 			HashMap<String, Object> eventProperties = new HashMap<>();
 			eventProperties.put(EngineInterface.CURRENT_INDEX, 0);
-			verify(admin,times(1)).postEvent(new Event(EngineInterface.BACKWARD_EVENT,(Map<String,Object>)eventProperties));
+			verify(admin,times(1)).postEvent(new Event(EngineInterface.BACKWARD_EVENT,eventProperties));
 		} catch (InterruptedException ie) {
 			ie.printStackTrace();
 		}
