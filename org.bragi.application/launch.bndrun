@@ -23,7 +23,6 @@
 	osgi.identity;filter:='(osgi.identity=org.apache.felix.scr)',\
 	osgi.identity;filter:='(osgi.identity=org.apache.felix.fileinstall)'
 -runbundles: \
-	biz.aQute.bnd.annotation;version='[2.4.0,2.4.1)',\
 	com.sun.jna;version='[3.0.0,3.0.1)',\
 	jaudiotagger-2.0.3;version='[2.0.3,2.0.4)',\
 	jna.platform-3.5.2;version='[3.5.2,3.5.3)',\

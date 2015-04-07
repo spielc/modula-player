@@ -62,8 +62,6 @@ public class CollectionTreeContentProvider implements ITreeContentProvider {
 		this.viewer = viewer;
 	}
 
-
-
 	public void addCollection(CollectionInterface collection) {
 		collections.add(collection);
 	}

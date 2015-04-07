@@ -211,8 +211,12 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 	public void addCollection(CollectionInterface collection) {
 		collections.add(collection);
 		if (collectionTreeContentProvider!=null) {
-			collectionTreeContentProvider.addCollection(collection);
-			dragListener.setCollection(collection);
+			getShell().getDisplay().asyncExec(()->{
+				collectionTreeContentProvider.addCollection(collection);
+				collectionTreeViewer.refresh();
+				dragListener.setCollection(collection);
+			});
+			
 		}
 	}
 	
