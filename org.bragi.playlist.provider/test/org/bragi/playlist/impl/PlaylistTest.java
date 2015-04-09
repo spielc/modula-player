@@ -33,7 +33,7 @@ import org.osgi.service.event.EventAdmin;
  * @author christoph
  *
  */
-public class LucenePlaylistTest {
+public class PlaylistTest {
 	
 	private static final String MP3_URL = "file:///tmp/test.mp3";
 	private static final String MP3_1_URL = "file:///tmp/test1.mp3";

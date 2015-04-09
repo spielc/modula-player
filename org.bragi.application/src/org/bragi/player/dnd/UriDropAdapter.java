@@ -5,9 +5,14 @@ package org.bragi.player.dnd;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import org.bragi.metadata.MetaDataEnum;
 import org.bragi.player.helpers.QueryHelpers;
@@ -37,57 +42,39 @@ public class UriDropAdapter extends ViewerDropAdapter {
 		String droppedData=data.toString();
 		PlaylistInterface playlist=(PlaylistInterface) viewer.getInput();
 		if (playlist!=null) {
-//			if (viewer instanceof TableViewer) {
-//				TableViewer tableViewer=(TableViewer) viewer;
-				Map<URI, Map<MetaDataEnum, String>> playlistEntries = playlist.filter("*", MetaDataEnum.values());
-				String[] lines=QueryHelpers.QueryResult2String(playlistEntries).split("\n");
-				int location = getCurrentLocation();
-				Object currentTarget = getCurrentTarget();
-				String target=(currentTarget==null)?"":currentTarget.toString();
-				int index=0;
-				for (String line : lines) {
-					if (line.equals(target)) {
-						switch(location) {
-						case LOCATION_AFTER:
-						case LOCATION_ON:
-							index++;
-							break;
-						case LOCATION_NONE:
-							index=lines.length;
-							break;
-						}
-						for (String droppedDataLine : droppedData.split("\n")) {
-//							if (playlist!=null) {
-								//TODO regex broken for for URIs that contain '
-								Pattern pattern=Pattern.compile("URI='([^;]*)'");
-								Matcher matcher=pattern.matcher(droppedDataLine);
-								if (matcher.find()) { 
-									String songUri=matcher.group(1);
-									if (target.equals("")) {
-										try {
-											playlist.addMedia(songUri);
-										} catch (URISyntaxException e) {
-											// TODO Auto-generated catch block
-											e.printStackTrace();
-										}
-									}
-									else
-//									try {
-//										playlist.addMedia(songUri);
-										playlist.insertMedia(index, songUri);
-//									} catch (URISyntaxException e) {
-//										e.printStackTrace();
-//									}
-								}
-//							}
-						}
-						break;
-					}
-					index++;
-				}			
+			Map<URI, Map<MetaDataEnum, String>> playlistEntries = playlist.filter("*", MetaDataEnum.values());
+			int location = getCurrentLocation();
+			Object currentTarget = getCurrentTarget();
+			List<String> lines = Arrays.asList(QueryHelpers.QueryResult2String(playlistEntries).split("\n"));
+			int index=lines.indexOf(currentTarget);
+			index = (index!=-1) ? index : lines.size();
+			switch(location) {
+			case LOCATION_BEFORE:
+				index--;
+				break;
+			case LOCATION_AFTER:
+			case LOCATION_ON:
+				index++;
+				break;
 			}
-			
-//		}
+			final int finalIndex=(index<0) ? 0 : index;
+			Pattern pattern=Pattern.compile("URI='([^;]*)'");
+			Stream<String> droppedDataLine=Arrays.asList(droppedData.split("\n")).stream();
+			droppedDataLine.map(line->pattern.matcher(line))
+						   .filter(matcher->matcher.find())
+						   .map(matcher->matcher.group(1)).forEach(uri->{
+								if (currentTarget==null) {
+									try {
+										playlist.addMedia(uri);
+									} catch (Exception e) {
+										// TODO Auto-generated catch block
+										e.printStackTrace();
+									}
+								}
+								else
+									playlist.insertMedia(finalIndex, uri);
+						   });
+		}
 		viewer.refresh();
 		return true;
 	}

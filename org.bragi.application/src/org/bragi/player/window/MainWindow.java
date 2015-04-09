@@ -191,15 +191,6 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 	public void setEngine(EngineInterface pEngine) {
 		engine=pEngine;
 		currentState=EngineStateEnum.LOADED;
-		if (playlist!=null) {
-			playlist.load("file:///home/christoph/.bragi/Playlist/current.m3u");
-			getShell().getDisplay().asyncExec(new Runnable() {
-			    @Override
-				public void run() {
-					playlistTableViewer.refresh();
-			    }
-			});
-		}
 	}
 	
 	public void unsetEngine(EngineInterface pEngine) {
@@ -227,13 +218,13 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 	@org.osgi.service.component.annotations.Reference(cardinality=ReferenceCardinality.OPTIONAL, policy=ReferencePolicy.DYNAMIC)
 	public void setPlaylist(PlaylistInterface pPlaylist) {
 		playlist=pPlaylist;
+		if (playlist!=null) {
+			playlist.load("file:///home/christoph/.bragi/Playlist/current.m3u");
+		}
 		if (playlistTableViewer!=null) {
-			getShell().getDisplay().asyncExec(new Runnable() {
-			    @Override
-				public void run() {
-			    	playlistTableViewer.setInput(playlist);
-					playlistTableViewer.refresh();
-			    }
+			getShell().getDisplay().asyncExec(()->{
+		      	playlistTableViewer.setInput(playlist);
+				playlistTableViewer.refresh();
 			});
 		}
 	}

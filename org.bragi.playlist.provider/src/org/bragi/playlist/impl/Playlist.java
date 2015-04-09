@@ -41,7 +41,6 @@ import org.osgi.service.event.EventAdmin;
 import christophedelory.content.Content;
 import christophedelory.playlist.Media;
 import christophedelory.playlist.Parallel;
-import christophedelory.playlist.PlaylistVisitor;
 import christophedelory.playlist.Sequence;
 import christophedelory.playlist.SpecificPlaylist;
 import christophedelory.playlist.SpecificPlaylistFactory;
@@ -60,70 +59,57 @@ public class Playlist implements PlaylistInterface {
 	 * @author christoph
 	 *
 	 */
-	private final class LucenePlaylistComparator implements Comparator<URI> {
+	private final class PlaylistEntryComparator implements Comparator<URI> {
 		
-		private Map<URI, Map<MetaDataEnum, String>> uriMap;
-		
-		private LucenePlaylistComparator(Map<URI, Map<MetaDataEnum, String>> pUriMap ) {
-			uriMap = pUriMap;
-		}
-
 		@Override
 		public int compare(URI o1, URI o2) {
 			Integer index1=playlist.indexOf(o1);
 			Integer index2=playlist.indexOf(o2);
 			return index1.compareTo(index2);
-			//Long insertionTime1=Long.parseLong(uriMap.get(o1).get(MetaDataEnum.INSERTION_TIME));
-			//Long insertionTime2=Long.parseLong(uriMap.get(o2).get(MetaDataEnum.INSERTION_TIME));;
-			//return insertionTime1.compareTo(insertionTime2);
 		}
 		
 	}
 	
 	/**
+	 * Private class which implements a PlaylistVisitor, which is used when loading a playlist to fill the playlist
+	 * with the files the playlist contains
 	 * 
 	 * @author christoph
 	 *
 	 */
-	private final class LucenePlaylistVisitor implements PlaylistVisitor {
+	private final class PlaylistVisitor implements christophedelory.playlist.PlaylistVisitor {
 		@Override
 		public void endVisitSequence(Sequence arg0) throws Exception {
-			// TODO Auto-generated method stub
+			
 		}
 
 		@Override
 		public void endVisitPlaylist(christophedelory.playlist.Playlist arg0) throws Exception {
-			// TODO Auto-generated method stub
 			
 		}
 
 		@Override
 		public void endVisitParallel(Parallel arg0) throws Exception {
-			// TODO Auto-generated method stub
 			
 		}
 
 		@Override
 		public void endVisitMedia(Media arg0) throws Exception {
-			// TODO Auto-generated method stub
 			
 		}
 
 		@Override
 		public void beginVisitSequence(Sequence arg0) throws Exception {
-			// TODO Auto-generated method stub
 			
 		}
 
 		@Override
 		public void beginVisitPlaylist(christophedelory.playlist.Playlist arg0) throws Exception {
-			// TODO Auto-generated method stub
 			
 		}
 
 		@Override
 		public void beginVisitParallel(Parallel arg0) throws Exception {
-			// TODO Auto-generated method stub
 			
 		}
 
@@ -159,7 +145,6 @@ public class Playlist implements PlaylistInterface {
 		try {
 			pIndexer.closeIndexWriter();
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		indexer=null;
@@ -200,7 +185,6 @@ public class Playlist implements PlaylistInterface {
 				try {
 					indexer.removeUri(uri);
 				} catch (Exception e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 				postEvent(uriObject,PlaylistInterface.REMOVE_EVENT);
@@ -218,6 +202,7 @@ public class Playlist implements PlaylistInterface {
 			int oldSize=playlist.size();
 			playlist.add(index, uriObject);
 			if (oldSize!=playlist.size()) {
+				indexer.indexUri(uri);
 				HashMap<String,Object> eventData=new HashMap<>();
 				eventData.put(URI_EVENTDATA, uriObject);
 				eventData.put(INDEX_EVENTDATA, index);
@@ -312,7 +297,7 @@ public class Playlist implements PlaylistInterface {
 			playlist.clear();
 			//traverse the playlist and visit it's entries using an instance of LucenePlaylistVisitor
 			christophedelory.playlist.Playlist genericPlaylist=specificPlaylist.toPlaylist();
-			genericPlaylist.acceptDown(new LucenePlaylistVisitor());
+			genericPlaylist.acceptDown(new PlaylistVisitor());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -338,7 +323,7 @@ public class Playlist implements PlaylistInterface {
 			try {
 				retValue=indexer.filter(query, metaData);
 				//TODO currently necessary as sorting is not possible. And won't be included in 1.0! In 2.0 a DSL for queries will be included
-				SortedMap<URI, Map<MetaDataEnum, String>> sortedRetValue=new TreeMap<>(new LucenePlaylistComparator(retValue));
+				SortedMap<URI, Map<MetaDataEnum, String>> sortedRetValue=new TreeMap<>(new PlaylistEntryComparator());
 				for (Entry<URI, Map<MetaDataEnum, String>>  entry: retValue.entrySet()) {
 					sortedRetValue.put(entry.getKey(), entry.getValue());
 				}
