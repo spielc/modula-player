@@ -96,7 +96,7 @@ public class LuceneIndexerTest {
 		indexer.indexUri(uris[1].toString());
 		indexer.indexUri(uris[0].toString());
 		List<IndexEntry> result=indexer.filter(MetaDataEnum.ALBUM.name()+":\""+ALBUM+"\"",MetaDataEnum.values()); //test regular, simple query
-		Assert.assertEquals(2, result.size());
+		Assert.assertEquals(3, result.size());
 		result=indexer.filter(""); //test empty query
 		Assert.assertEquals(0, result.size());
 		result=indexer.filter(null); //test null query
@@ -108,6 +108,6 @@ public class LuceneIndexerTest {
 		result=indexer.filter(MetaDataEnum.ARTIST.name()+":\""+ARTIST+"\" AND "+MetaDataEnum.TRACK_NUMBER+":\""+TRACK_NR+"\"",MetaDataEnum.values()); //test AND-query
 		Assert.assertEquals(1, result.size());
 		result=indexer.filter(MetaDataEnum.TRACK_ID+":\""+TRACKNAME_TRACK_1+"\" OR "+MetaDataEnum.TRACK_NUMBER+":\""+TRACK_NR+"\"",MetaDataEnum.values()); //test OR-query
-		Assert.assertEquals(2, result.size());
+		Assert.assertEquals(3, result.size());
 	}
 }
