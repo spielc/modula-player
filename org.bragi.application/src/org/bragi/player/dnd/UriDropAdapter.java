@@ -3,19 +3,13 @@
  */
 package org.bragi.player.dnd;
 
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import org.bragi.metadata.MetaDataEnum;
-import org.bragi.player.helpers.QueryHelpers;
+import org.bragi.playlist.PlaylistEntry;
 import org.bragi.playlist.PlaylistInterface;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.jface.viewers.ViewerDropAdapter;
@@ -42,10 +36,10 @@ public class UriDropAdapter extends ViewerDropAdapter {
 		String droppedData=data.toString();
 		PlaylistInterface playlist=(PlaylistInterface) viewer.getInput();
 		if (playlist!=null) {
-			Map<URI, Map<MetaDataEnum, String>> playlistEntries = playlist.filter("*", MetaDataEnum.values());
+			List<PlaylistEntry> playlistEntries = playlist.filter("*", MetaDataEnum.values());
 			int location = getCurrentLocation();
 			Object currentTarget = getCurrentTarget();
-			List<String> lines = Arrays.asList(QueryHelpers.QueryResult2String(playlistEntries).split("\n"));
+			List<String> lines = Arrays.asList(playlistEntries.stream().map(entry->"URI='"+entry.getUri().toString()+"'"+entry.getMetaData().entrySet().stream().map(metaData->";;"+metaData.getKey().name()+"='"+metaData.getValue()+"'")+"\n").toString().split("\n"));
 			int index=lines.indexOf(currentTarget);
 			index = (index!=-1) ? index : lines.size();
 			switch(location) {

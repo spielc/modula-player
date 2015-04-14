@@ -11,9 +11,8 @@
  */
 package org.bragi.collection;
 
-import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Map;
+import java.util.List;
 
 import org.bragi.metadata.MetaDataEnum;
 
@@ -33,5 +32,5 @@ public interface CollectionInterface {
 	public void addMedia(String uri) throws URISyntaxException;
 	public void addCollectionRoot(String uri) throws URISyntaxException;
 	public void removeMedia(String uri);
-	public Map<URI,Map<MetaDataEnum,String>> filter(String query, MetaDataEnum... metaData);
+	public List<CollectionEntry> filter(String query, MetaDataEnum... metaData);
 }

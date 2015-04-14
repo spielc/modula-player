@@ -11,9 +11,8 @@
  */
 package org.bragi.playlist;
 
-import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Map;
+import java.util.List;
 
 import org.bragi.metadata.MetaDataEnum;
 
@@ -38,5 +37,6 @@ public interface PlaylistInterface {
 	public void toggleRandom();
 	public void save(String uri);
 	public void load(String uri);
-	public Map<URI,Map<MetaDataEnum,String>> filter(String query, MetaDataEnum... metaData);
+	// TODO Because a playlist may contain a certain URI multiple times
+	public List<PlaylistEntry> filter(String query, MetaDataEnum... metaData);
 }

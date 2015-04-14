@@ -3,9 +3,9 @@
  */
 package org.bragi.player.dnd;
 
-import java.net.URI;
-import java.util.Map;
+import java.util.List;
 
+import org.bragi.collection.CollectionEntry;
 import org.bragi.collection.CollectionInterface;
 import org.bragi.metadata.MetaDataEnum;
 import org.bragi.player.helpers.QueryHelpers;
@@ -91,7 +91,7 @@ public class UriDragListener implements DragSourceListener {
 //			}
 //		}
 		if (collection!=null) {
-			Map<URI, Map<MetaDataEnum, String>> filteredCollection=collection.filter(obj.getQuery(), MetaDataEnum.values());
+			List<CollectionEntry> filteredCollection=collection.filter(obj.getQuery(), MetaDataEnum.values());
 			evt.data=QueryHelpers.QueryResult2String(filteredCollection);
 		}
 		else

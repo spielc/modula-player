@@ -2,11 +2,10 @@ package org.bragi.player.viewers;
 
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Dictionary;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
+import org.bragi.collection.CollectionEntry;
 import org.bragi.collection.CollectionInterface;
 import org.bragi.metadata.MetaDataEnum;
 import org.bragi.player.model.TreeNode;
@@ -105,10 +104,10 @@ public class CollectionTreeContentProvider implements ITreeContentProvider {
 		List<String> entries=new ArrayList<>();
 		for(char character='A';character<='Z';character++) {
 			String newQuery=query+meta.name()+":"+character+"*";
-			Map<URI, Map<MetaDataEnum, String>> tracks=collection.filter(newQuery,MetaDataEnum.values());
-			for(Entry<URI, Map<MetaDataEnum, String>> trackEntry : tracks.entrySet()) {
-				URI trackURI=trackEntry.getKey();
-				Map<MetaDataEnum, String> metaData=trackEntry.getValue();
+			List<CollectionEntry> tracks=collection.filter(newQuery,MetaDataEnum.values());
+			for(CollectionEntry trackEntry : tracks) {
+				URI trackURI=trackEntry.getUri();
+				Map<MetaDataEnum, String> metaData=trackEntry.getMetaData();
 				String entry=metaData.get(meta);
 				if (entries.contains(entry))
 					continue;

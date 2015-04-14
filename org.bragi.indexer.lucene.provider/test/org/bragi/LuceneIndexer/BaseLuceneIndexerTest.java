@@ -5,11 +5,10 @@ import static org.mockito.Mockito.when;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Dictionary;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Map;
 
+import org.bragi.indexer.IndexEntry;
 import org.bragi.indexer.IndexerInterface;
 import org.bragi.metadata.MetaDataEnum;
 import org.bragi.metadata.MetaDataProviderInterface;
@@ -76,7 +75,7 @@ public class BaseLuceneIndexerTest {
 		};
 		indexerComponent.indexUri(uris[0].toString());
 		indexerComponent.indexUri(uris[1].toString());
-		Map<URI, Map<MetaDataEnum, String>> result=indexerComponent.filter(MetaDataEnum.ALBUM.name()+":\""+ALBUM+"\"",MetaDataEnum.values()); //test regular, simple query
+		List<IndexEntry> result=indexerComponent.filter(MetaDataEnum.ALBUM.name()+":\""+ALBUM+"\"",MetaDataEnum.values()); //test regular, simple query
 		Assert.assertEquals(2, result.size());
 		result=indexerComponent.filter("",MetaDataEnum.values()); //test empty query
 		Assert.assertEquals(0, result.size());

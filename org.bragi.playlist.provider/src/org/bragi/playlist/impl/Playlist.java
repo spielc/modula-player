@@ -20,20 +20,18 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Hashtable;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.SortedMap;
-import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.bragi.indexer.IndexEntry;
 import org.bragi.indexer.IndexerInterface;
 import org.bragi.metadata.MetaDataEnum;
+import org.bragi.playlist.PlaylistEntry;
 import org.bragi.playlist.PlaylistInterface;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
@@ -317,21 +315,51 @@ public class Playlist implements PlaylistInterface {
 	}
 	
 	@Override
-	public Map<URI, Map<MetaDataEnum, String>> filter(String query, MetaDataEnum... metaData) {
-		Map<URI, Map<MetaDataEnum, String>> retValue = new Hashtable<>();
+	public List<PlaylistEntry> filter(String query, MetaDataEnum... metaData) {
+//		Map<URI, Map<MetaDataEnum, String>> retValue = new Hashtable<>();
+//		if (query!=null && indexer!=null) {
+//			try {
+//				retValue=indexer.filter(query, metaData);
+//				//TODO currently necessary as sorting is not possible. And won't be included in 1.0! In 2.0 a DSL for queries will be included
+//				SortedMap<URI, Map<MetaDataEnum, String>> sortedRetValue=new TreeMap<>(new PlaylistEntryComparator());
+//				for (Entry<URI, Map<MetaDataEnum, String>>  entry: retValue.entrySet()) {
+//					sortedRetValue.put(entry.getKey(), entry.getValue());
+//				}
+//				return sortedRetValue;
+//			} catch (Exception e) {
+//				e.printStackTrace();
+//			}
+//		}
+//		return retValue;
+		List<PlaylistEntry> retValue = new ArrayList<>();
 		if (query!=null && indexer!=null) {
 			try {
-				retValue=indexer.filter(query, metaData);
-				//TODO currently necessary as sorting is not possible. And won't be included in 1.0! In 2.0 a DSL for queries will be included
-				SortedMap<URI, Map<MetaDataEnum, String>> sortedRetValue=new TreeMap<>(new PlaylistEntryComparator());
-				for (Entry<URI, Map<MetaDataEnum, String>>  entry: retValue.entrySet()) {
-					sortedRetValue.put(entry.getKey(), entry.getValue());
-				}
-				return sortedRetValue;
+				List<IndexEntry> filteredMetaData=indexer.filter(query, metaData);
+				retValue=Arrays.asList(filteredMetaData.stream().map(Playlist::createPlaylistEntry).toArray(PlaylistEntry[]::new));
+//				playlist.stream().filter(entry->filteredMetaData.containsKey(entry))
+//								 .sorted(new PlaylistEntryComparator())
+//								 .forEach(entry->{
+//									 PlaylistEntry playlistEntry=new PlaylistEntry();
+//									 playlistEntry.setUri(entry);
+//									 playlistEntry.setMetaData(filteredMetaData.get(entry));
+//									 retValue.add(playlistEntry);
+//								 });
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		}
 		return retValue;
+	}
+
+	/**
+	 * Static helper method to transform a IndexEntry-object to a PlaylistEntry-object
+	 * @param entry
+	 * @return
+	 */
+	private static PlaylistEntry createPlaylistEntry(IndexEntry entry) {
+		PlaylistEntry playlistEntry=new PlaylistEntry();
+		playlistEntry.setUri(entry.getUri());
+		playlistEntry.setMetaData(entry.getMetaData());
+		return playlistEntry;
 	}
 }
