@@ -41,14 +41,24 @@ import org.osgi.service.event.EventAdmin;
  */
 public class LuceneCollectionTest {
 	
+	private static String QUERY = MetaDataEnum.ARTIST.name()+":\"Kataklysm\"";
+	
 	private IndexerInterface indexer;
 	private LuceneCollection collection;
 	private EventAdmin admin;
 
 	@Before
-	public void initTest() throws URISyntaxException, IOException {
+	public void initTest() throws Exception {
 		indexer = mock(IndexerInterface.class);
 		admin = mock(EventAdmin.class);
+		Map<URI, Map<MetaDataEnum, String>> retValue = new Hashtable<>();
+		retValue.put(URI.create("1"), new Hashtable<MetaDataEnum, String>());
+		retValue.put(URI.create("2"), new Hashtable<MetaDataEnum, String>());
+		when(indexer.filter(QUERY,MetaDataEnum.values())).thenReturn(retValue);
+		when(indexer.filter(QUERY,new MetaDataEnum[]{})).thenReturn(new Hashtable<URI, Map<MetaDataEnum,String>>());
+		when(indexer.filter("")).thenReturn(new Hashtable<URI, Map<MetaDataEnum,String>>());
+		when(indexer.filter(null)).thenReturn(new Hashtable<URI, Map<MetaDataEnum,String>>());
+		//TODO add mock-case for indexer.filter("*", MetaDataEnum.TITLE)
 		collection=new LuceneCollection();
 		collection.setIndexer(indexer);
 		collection.setEventAdmin(admin);
@@ -117,26 +127,16 @@ public class LuceneCollectionTest {
 	
 	@Test
 	public void filterTest() throws Exception {
-		String file1 = LuceneCollectionTest.class.getClassLoader().getResource("a/b/test.mp3").toURI().toString();
-		String file2 = LuceneCollectionTest.class.getClassLoader().getResource("a/b/c/test.ogg").toURI().toString();
-		String query = MetaDataEnum.ARTIST.name()+":\"Kataklysm\"";
-		Map<URI, Map<MetaDataEnum, String>> retValue = new Hashtable<>();
-		retValue.put(URI.create("1"), new Hashtable<MetaDataEnum, String>());
-		retValue.put(URI.create("2"), new Hashtable<MetaDataEnum, String>());
-		when(indexer.filter(query,MetaDataEnum.values())).thenReturn(retValue);
-		when(indexer.filter(query,new MetaDataEnum[]{})).thenReturn(new Hashtable<URI, Map<MetaDataEnum,String>>());
-		when(indexer.filter("")).thenReturn(new Hashtable<URI, Map<MetaDataEnum,String>>());
-		when(indexer.filter(null)).thenReturn(new Hashtable<URI, Map<MetaDataEnum,String>>());
-		Map<URI, Map<MetaDataEnum, String>> filtered=collection.filter(query,MetaDataEnum.values());
+		Map<URI, Map<MetaDataEnum, String>> filtered=collection.filter(QUERY,MetaDataEnum.values());
 		Assert.assertEquals(2, filtered.size());
-		filtered=collection.filter(query, new MetaDataEnum[]{});
+		filtered=collection.filter(QUERY, new MetaDataEnum[]{});
 		Assert.assertEquals(0, filtered.size());
 		filtered=collection.filter("");
 		Assert.assertEquals(0, filtered.size());
 		filtered=collection.filter(null);
 		Assert.assertEquals(0, filtered.size());
 		collection.setIndexer(null);
-		filtered=collection.filter(query);
+		filtered=collection.filter(QUERY);
 		Assert.assertEquals(0, filtered.size());
 	}
 }

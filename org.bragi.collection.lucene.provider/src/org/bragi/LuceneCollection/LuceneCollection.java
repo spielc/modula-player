@@ -28,6 +28,8 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ForkJoinPool;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.bragi.LuceneCollection.internal.CollectionChangeHandlerThread;
 import org.bragi.LuceneCollection.internal.IndexAction;
@@ -67,6 +69,47 @@ public class LuceneCollection implements CollectionInterface {
 	public void setIndexer(IndexerInterface pIndexer) {
 		indexer=pIndexer;
 		collectionChangeHandler.setIndexer(pIndexer);
+		if (indexer!=null) {
+			try {
+				Map<URI,Map<MetaDataEnum,String>> collectionEntries=indexer.filter("*", MetaDataEnum.TITLE);
+				// (re-)register directories of collection in collectionChangeHandler
+				collectionEntries.entrySet().parallelStream()
+											.map(entry->entry.getKey())
+											.map(Paths::get)
+											.map(path->path.getParent())
+											.filter(path->path!=null)
+											.distinct()
+											.forEach(path->{
+												try {
+													collectionChangeHandler.register(path);
+												} catch (Exception e) {
+													e.printStackTrace();
+												}
+											});
+				// TODO iterate over all files in all parent directories of collectionEntries and index the ones that are not yet contained in the index
+				//directories.map
+				collectionEntries.entrySet().parallelStream()
+											.map(entry->entry.getKey())
+											.map(Paths::get)
+											.map(path->path.getParent())
+											.filter(path->path!=null)
+											.distinct()
+											.forEach(path->{
+												try {
+													Files.walk(path,FileVisitOption.FOLLOW_LINKS)
+														 .filter(path1->!collectionEntries.containsKey(path1.toUri()))
+														 .map(path1->path1.toUri().toString())
+														 //.collect(Collectors.toList())
+														 .forEach(path1->indexer.indexUri(path1));
+												} catch (Exception e) {
+													e.printStackTrace();
+												}
+											});
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
 //		for (URI uri : playlist) {
 //			indexer.indexUri(uri.toString());
 //		}
