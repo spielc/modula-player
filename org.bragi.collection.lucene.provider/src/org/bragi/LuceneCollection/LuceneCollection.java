@@ -22,18 +22,19 @@ import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.Hashtable;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.bragi.LuceneCollection.internal.CollectionChangeHandlerThread;
 import org.bragi.LuceneCollection.internal.IndexAction;
+import org.bragi.collection.CollectionEntry;
 import org.bragi.collection.CollectionInterface;
+import org.bragi.indexer.IndexEntry;
 import org.bragi.indexer.IndexerInterface;
 import org.bragi.metadata.MetaDataEnum;
 import org.osgi.service.event.Event;
@@ -71,40 +72,40 @@ public class LuceneCollection implements CollectionInterface {
 		collectionChangeHandler.setIndexer(pIndexer);
 		if (indexer!=null) {
 			try {
-				Map<URI,Map<MetaDataEnum,String>> collectionEntries=indexer.filter("*", MetaDataEnum.TITLE);
-				// (re-)register directories of collection in collectionChangeHandler
-				collectionEntries.entrySet().parallelStream()
-											.map(entry->entry.getKey())
-											.map(Paths::get)
-											.map(path->path.getParent())
-											.filter(path->path!=null)
-											.distinct()
-											.forEach(path->{
-												try {
-													collectionChangeHandler.register(path);
-												} catch (Exception e) {
-													e.printStackTrace();
-												}
-											});
-				// TODO iterate over all files in all parent directories of collectionEntries and index the ones that are not yet contained in the index
-				//directories.map
-				collectionEntries.entrySet().parallelStream()
-											.map(entry->entry.getKey())
-											.map(Paths::get)
-											.map(path->path.getParent())
-											.filter(path->path!=null)
-											.distinct()
-											.forEach(path->{
-												try {
-													Files.walk(path,FileVisitOption.FOLLOW_LINKS)
-														 .filter(path1->!collectionEntries.containsKey(path1.toUri()))
-														 .map(path1->path1.toUri().toString())
-														 //.collect(Collectors.toList())
-														 .forEach(path1->indexer.indexUri(path1));
-												} catch (Exception e) {
-													e.printStackTrace();
-												}
-											});
+//				Map<URI,Map<MetaDataEnum,String>> collectionEntries=indexer.filter("*", MetaDataEnum.TITLE);
+//				// (re-)register directories of collection in collectionChangeHandler
+//				collectionEntries.entrySet().parallelStream()
+//											.map(entry->entry.getKey())
+//											.map(Paths::get)
+//											.map(path->path.getParent())
+//											.filter(path->path!=null)
+//											.distinct()
+//											.forEach(path->{
+//												try {
+//													collectionChangeHandler.register(path);
+//												} catch (Exception e) {
+//													e.printStackTrace();
+//												}
+//											});
+//				// TODO iterate over all files in all parent directories of collectionEntries and index the ones that are not yet contained in the index
+//				//directories.map
+//				collectionEntries.entrySet().parallelStream()
+//											.map(entry->entry.getKey())
+//											.map(Paths::get)
+//											.map(path->path.getParent())
+//											.filter(path->path!=null)
+//											.distinct()
+//											.forEach(path->{
+//												try {
+//													Files.walk(path,FileVisitOption.FOLLOW_LINKS)
+//														 .filter(path1->!collectionEntries.containsKey(path1.toUri()))
+//														 .map(path1->path1.toUri().toString())
+//														 //.collect(Collectors.toList())
+//														 .forEach(path1->indexer.indexUri(path1));
+//												} catch (Exception e) {
+//													e.printStackTrace();
+//												}
+//											});
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -207,12 +208,12 @@ public class LuceneCollection implements CollectionInterface {
 	}
 
 	@Override
-	public Map<URI, Map<MetaDataEnum, String>> filter(String query,
+	public List<CollectionEntry> filter(String query,
 			MetaDataEnum... metaData) {
-		Map<URI, Map<MetaDataEnum, String>> result=new Hashtable<>();
+		List<CollectionEntry> result=new ArrayList<>();
 		if (indexer!=null) {
 			try {
-				result=indexer.filter(query, metaData);
+				result=Arrays.asList(indexer.filter(query, metaData).stream().map(LuceneCollection::createCollectionEntry).toArray(CollectionEntry[]::new));
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -220,4 +221,10 @@ public class LuceneCollection implements CollectionInterface {
 		return result;
 	}
 	
+	public static CollectionEntry createCollectionEntry(IndexEntry entry) {
+		CollectionEntry collectionEntry=new CollectionEntry();
+		collectionEntry.setUri(entry.getUri());
+		collectionEntry.setMetaData(entry.getMetaData());
+		return collectionEntry;
+	}
 }

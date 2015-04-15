@@ -19,16 +19,14 @@ import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Dictionary;
 import java.util.EnumSet;
 import java.util.Hashtable;
 import java.util.List;
-import java.util.Map;
 
 import junit.framework.Assert;
 
-import org.bragi.LuceneCollection.internal.IndexAction;
+import org.bragi.collection.CollectionEntry;
+import org.bragi.indexer.IndexEntry;
 import org.bragi.indexer.IndexerInterface;
 import org.bragi.metadata.MetaDataEnum;
 import org.junit.Before;
@@ -51,14 +49,6 @@ public class LuceneCollectionTest {
 	public void initTest() throws Exception {
 		indexer = mock(IndexerInterface.class);
 		admin = mock(EventAdmin.class);
-		Map<URI, Map<MetaDataEnum, String>> retValue = new Hashtable<>();
-		retValue.put(URI.create("1"), new Hashtable<MetaDataEnum, String>());
-		retValue.put(URI.create("2"), new Hashtable<MetaDataEnum, String>());
-		when(indexer.filter(QUERY,MetaDataEnum.values())).thenReturn(retValue);
-		when(indexer.filter(QUERY,new MetaDataEnum[]{})).thenReturn(new Hashtable<URI, Map<MetaDataEnum,String>>());
-		when(indexer.filter("")).thenReturn(new Hashtable<URI, Map<MetaDataEnum,String>>());
-		when(indexer.filter(null)).thenReturn(new Hashtable<URI, Map<MetaDataEnum,String>>());
-		//TODO add mock-case for indexer.filter("*", MetaDataEnum.TITLE)
 		collection=new LuceneCollection();
 		collection.setIndexer(indexer);
 		collection.setEventAdmin(admin);
@@ -127,7 +117,23 @@ public class LuceneCollectionTest {
 	
 	@Test
 	public void filterTest() throws Exception {
-		Map<URI, Map<MetaDataEnum, String>> filtered=collection.filter(QUERY,MetaDataEnum.values());
+		String file1 = LuceneCollectionTest.class.getClassLoader().getResource("a/b/test.mp3").toURI().toString();
+		String file2 = LuceneCollectionTest.class.getClassLoader().getResource("a/b/c/test.ogg").toURI().toString();
+		String query = MetaDataEnum.ARTIST.name()+":\"Kataklysm\"";
+		List<IndexEntry> retValue = new ArrayList<>();
+		IndexEntry entry1=new IndexEntry();
+		entry1.setUri(URI.create("1"));
+		entry1.setMetaData(new Hashtable<MetaDataEnum, String>());
+		retValue.add(entry1);
+		IndexEntry entry2=new IndexEntry();
+		entry2.setUri(URI.create("2"));
+		entry2.setMetaData(new Hashtable<MetaDataEnum, String>());
+		retValue.add(entry2);
+		when(indexer.filter(query,MetaDataEnum.values())).thenReturn(retValue);
+		when(indexer.filter(query,new MetaDataEnum[]{})).thenReturn(new ArrayList<>());
+		when(indexer.filter("")).thenReturn(new ArrayList<>());
+		when(indexer.filter(null)).thenReturn(new ArrayList<>());
+		List<CollectionEntry> filtered=collection.filter(query,MetaDataEnum.values());
 		Assert.assertEquals(2, filtered.size());
 		filtered=collection.filter(QUERY, new MetaDataEnum[]{});
 		Assert.assertEquals(0, filtered.size());

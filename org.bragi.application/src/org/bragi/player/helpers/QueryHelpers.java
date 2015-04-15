@@ -3,10 +3,10 @@
  */
 package org.bragi.player.helpers;
 
-import java.net.URI;
-import java.util.Map;
+import java.util.List;
+import java.util.stream.Collectors;
 
-import org.bragi.metadata.MetaDataEnum;
+import org.bragi.collection.CollectionEntry;
 
 /**
  * @author christoph
@@ -19,16 +19,7 @@ public final class QueryHelpers {
 	 * @param filteredCollection
 	 * @return
 	 */
-	public static String QueryResult2String(Map<URI, Map<MetaDataEnum, String>> filteredCollection) {
-		StringBuffer buffer=new StringBuffer();
-		for (Map.Entry<URI, Map<MetaDataEnum, String>> filteredCollectionEntry : filteredCollection.entrySet()) {
-			buffer.append("URI='"+filteredCollectionEntry.getKey().toString()+"'");
-			for (Map.Entry<MetaDataEnum, String> metaData : filteredCollectionEntry.getValue().entrySet()) {
-				buffer.append(";;");
-				buffer.append(metaData.getKey().name()+"='"+metaData.getValue()+"'");
-			}
-			buffer.append("\n");
-		}
-		return buffer.toString();
+	public static String QueryResult2String(List<CollectionEntry> filteredCollection) {
+		return filteredCollection.stream().map(entry->"URI='"+entry.getUri().toString()+"'"+entry.getMetaData().entrySet().stream().map(metaData->";;"+metaData.getKey().name()+"='"+metaData.getValue()+"'").collect(Collectors.joining())).collect(Collectors.joining("\n"));
 	}
 }

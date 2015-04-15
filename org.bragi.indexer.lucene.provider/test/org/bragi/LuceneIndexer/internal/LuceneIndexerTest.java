@@ -9,14 +9,13 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Dictionary;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.store.AlreadyClosedException;
 import org.apache.lucene.store.RAMDirectory;
+import org.bragi.indexer.IndexEntry;
 import org.bragi.metadata.MetaDataEnum;
 import org.bragi.metadata.MetaDataProviderInterface;
 import org.junit.Assert;
@@ -95,8 +94,9 @@ public class LuceneIndexerTest {
 		};
 		indexer.indexUri(uris[0].toString());
 		indexer.indexUri(uris[1].toString());
-		Map<URI, Map<MetaDataEnum, String>> result=indexer.filter(MetaDataEnum.ALBUM.name()+":\""+ALBUM+"\"",MetaDataEnum.values()); //test regular, simple query
-		Assert.assertEquals(2, result.size());
+		indexer.indexUri(uris[0].toString());
+		List<IndexEntry> result=indexer.filter(MetaDataEnum.ALBUM.name()+":\""+ALBUM+"\"",MetaDataEnum.values()); //test regular, simple query
+		Assert.assertEquals(3, result.size());
 		result=indexer.filter(""); //test empty query
 		Assert.assertEquals(0, result.size());
 		result=indexer.filter(null); //test null query
@@ -108,6 +108,6 @@ public class LuceneIndexerTest {
 		result=indexer.filter(MetaDataEnum.ARTIST.name()+":\""+ARTIST+"\" AND "+MetaDataEnum.TRACK_NUMBER+":\""+TRACK_NR+"\"",MetaDataEnum.values()); //test AND-query
 		Assert.assertEquals(1, result.size());
 		result=indexer.filter(MetaDataEnum.TRACK_ID+":\""+TRACKNAME_TRACK_1+"\" OR "+MetaDataEnum.TRACK_NUMBER+":\""+TRACK_NR+"\"",MetaDataEnum.values()); //test OR-query
-		Assert.assertEquals(2, result.size());
+		Assert.assertEquals(3, result.size());
 	}
 }

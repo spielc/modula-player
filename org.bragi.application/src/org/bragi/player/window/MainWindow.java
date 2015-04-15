@@ -1,7 +1,6 @@
 package org.bragi.player.window;
 
 import java.io.File;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -10,7 +9,6 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -19,13 +17,13 @@ import org.bragi.engine.EngineInterface;
 import org.bragi.metadata.MetaDataEnum;
 import org.bragi.player.dnd.UriDragListener;
 import org.bragi.player.dnd.UriDropAdapter;
-import org.bragi.player.helpers.QueryHelpers;
 import org.bragi.player.model.TreeNode;
 import org.bragi.player.statemachines.EngineStateChangeListener;
 import org.bragi.player.statemachines.EngineStateEnum;
 import org.bragi.player.viewers.CollectionTreeContentProvider;
 import org.bragi.player.viewers.CollectionTreeLabelProvider;
 import org.bragi.player.widgets.SeekWidget;
+import org.bragi.playlist.PlaylistEntry;
 import org.bragi.playlist.PlaylistInterface;
 import org.eclipse.jface.action.CoolBarManager;
 import org.eclipse.jface.action.MenuManager;
@@ -92,8 +90,8 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 			if ((currentState==EngineStateEnum.PLAYING) || (currentState==EngineStateEnum.PAUSED)) {
 				String row=data.toString();
 				PlaylistInterface playlist=(PlaylistInterface)playlistTableViewer.getInput();
-				Map<URI, Map<MetaDataEnum, String>> playlistEntries = playlist.filter("*", MetaDataEnum.values());
-				String[] lines=QueryHelpers.QueryResult2String(playlistEntries).split("\n");
+				List<PlaylistEntry> playlistEntries = playlist.filter("*", MetaDataEnum.values());
+				String[] lines=playlistEntries.stream().map(entry->"URI='"+entry.getUri().toString()+"'"+entry.getMetaData().entrySet().stream().map(metaData->";;"+metaData.getKey().name()+"='"+metaData.getValue()+"'")+"\n").toString().split("\n");
 				int index=0;
 				for (String line : lines) {
 					if (line.equals(row)) {
@@ -117,8 +115,8 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 		  @Override
 		  public Object[] getElements(Object inputElement) {
 			  PlaylistInterface playlist=(PlaylistInterface)inputElement;
-			  Map<URI, Map<MetaDataEnum, String>> playlistEntries = playlist.filter("*", MetaDataEnum.values());
-			  String[] lines=QueryHelpers.QueryResult2String(playlistEntries).split("\n");
+			  List<PlaylistEntry> playlistEntries = playlist.filter("*", MetaDataEnum.values());
+			  String[] lines=playlistEntries.stream().map(entry->"URI='"+entry.getUri().toString()+"'"+entry.getMetaData().entrySet().stream().map(metaData->";;"+metaData.getKey().name()+"='"+metaData.getValue()+"'")+"\n").toString().split("\n");
 			  return lines;
 		  }
 
