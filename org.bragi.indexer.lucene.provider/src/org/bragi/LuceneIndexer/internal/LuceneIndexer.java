@@ -35,6 +35,7 @@ import org.apache.lucene.search.SearcherFactory;
 import org.apache.lucene.search.SearcherManager;
 import org.apache.lucene.search.Sort;
 import org.apache.lucene.search.SortField;
+import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.search.TopFieldDocs;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.Version;
@@ -49,8 +50,6 @@ import org.bragi.metadata.MetaDataProviderInterface;
 public class LuceneIndexer {
 	
 	private static final String URICONSTANT = "URI";
-	private static final String INSERTIONCOUNTCONSTANT = "INSERTIONCOUNT";
-	private long insertionCount;
 	private MetaDataProviderInterface metaDataProvider;
 	private IndexWriter indexWriter;
 	private static final EnumSet<MetaDataEnum> metaDataToIndexSet=EnumSet.range(MetaDataEnum.ALBUM, MetaDataEnum.URL);
@@ -59,7 +58,6 @@ public class LuceneIndexer {
 	
 	public LuceneIndexer(Directory directory) {
 		try {
-			insertionCount=0;
 			StandardAnalyzer analyzer = new StandardAnalyzer();
 			IndexWriterConfig indexWriterConfig = new IndexWriterConfig(Version.LATEST, analyzer);
 			indexWriterConfig.setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND);
@@ -97,7 +95,7 @@ public class LuceneIndexer {
 			Document doc = new Document();
 			//doc.add(new LongField(INSERTIONCOUNTCONSTANT, insertionCount++, LongField.Store.YES));
 			//doc.add(new Field (INSERTIONCOUNTCONSTANT, String.valueOf(insertionCount++), Field.Store.NO, Field.Index.NOT_ANALYZED));
-			doc.add(new StoredField(INSERTIONCOUNTCONSTANT, insertionCount++));
+//			doc.add(new StoredField(INSERTIONCOUNTCONSTANT, insertionCount++));
 			doc.add(new TextField(URICONSTANT, uri, TextField.Store.YES));
 			int i=0;
 			for (MetaDataEnum meta : metaDataToIndexSet) {
@@ -162,7 +160,7 @@ public class LuceneIndexer {
 		
 		try {
 			Query q = queryParser.parse(query);
-			TopFieldDocs docs=searcher.search(q, null, Integer.MAX_VALUE, new Sort(new SortField(INSERTIONCOUNTCONSTANT, SortField.Type.LONG)));
+			TopDocs docs=searcher.search(q, null, Integer.MAX_VALUE);
 			for (ScoreDoc hit : docs.scoreDocs) {
 				int docId = hit.doc;
 				Document hitDocument=searcher.doc(docId);

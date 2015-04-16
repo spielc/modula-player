@@ -11,6 +11,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.bragi.collection.CollectionInterface;
 import org.bragi.engine.EngineInterface;
@@ -116,7 +117,7 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 		  public Object[] getElements(Object inputElement) {
 			  PlaylistInterface playlist=(PlaylistInterface)inputElement;
 			  List<PlaylistEntry> playlistEntries = playlist.filter("*", MetaDataEnum.values());
-			  String[] lines=playlistEntries.stream().map(entry->"URI='"+entry.getUri().toString()+"'"+entry.getMetaData().entrySet().stream().map(metaData->";;"+metaData.getKey().name()+"='"+metaData.getValue()+"'")+"\n").toString().split("\n");
+			  Object[] lines=playlistEntries.stream().map(entry->"URI='"+entry.getUri().toString()+"'"+entry.getMetaData().entrySet().stream().map(metaData->";;"+metaData.getKey().name()+"='"+metaData.getValue()+"'").collect(Collectors.joining())).collect(Collectors.toList()).toArray();
 			  return lines;
 		  }
 

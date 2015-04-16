@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -57,12 +58,12 @@ public class Playlist implements PlaylistInterface {
 	 * @author christoph
 	 *
 	 */
-	private final class PlaylistEntryComparator implements Comparator<URI> {
+	private final class PlaylistEntryComparator implements Comparator<IndexEntry> {
 		
 		@Override
-		public int compare(URI o1, URI o2) {
-			Integer index1=playlist.indexOf(o1);
-			Integer index2=playlist.indexOf(o2);
+		public int compare(IndexEntry o1, IndexEntry o2) {
+			Integer index1=playlist.indexOf(o1.getUri());
+			Integer index2=playlist.indexOf(o2.getUri());
 			return index1.compareTo(index2);
 		}
 		
@@ -118,7 +119,7 @@ public class Playlist implements PlaylistInterface {
 		}
 	}
 
-	private List<URI> playlist;
+	private List<PlaylistEntry> playlist;
 	private boolean isRepeated;
 	private boolean isRandomized;
 	private EventAdmin eventAdmin;
@@ -135,9 +136,10 @@ public class Playlist implements PlaylistInterface {
 	@org.osgi.service.component.annotations.Reference(target="(type=PlaylistIndexer)")
 	public void setIndexer(IndexerInterface pIndexer) {
 		indexer=pIndexer;
-		for (URI uri : playlist) {
-			indexer.indexUri(uri.toString());
-		}
+		playlist.stream().map(PlaylistEntry::getUri).map(Object::toString).forEach(indexer::indexUri);
+//		for (URI uri : playlist) {
+//			indexer.indexUri(uri.toString());
+//		}
 	}
 	public void unsetIndexer(IndexerInterface pIndexer) {
 		try {
@@ -164,7 +166,9 @@ public class Playlist implements PlaylistInterface {
 	public void addMedia(String uri) throws URISyntaxException {
 		if (uri!=null && !uri.isEmpty() && indexer!=null) { //only do something if uri is not null and not empty
 			URI uriObject = new URI(uri);
-			if (playlist.add(uriObject)) { //only post even if operation was successful
+			PlaylistEntry entry=new PlaylistEntry();
+			entry.setUri(uriObject);
+			if (playlist.add(entry)) { //only post even if operation was successful
 				indexer.indexUri(uri);
 				postEvent(uriObject,PlaylistInterface.ADD_EVENT);
 			}
@@ -175,6 +179,7 @@ public class Playlist implements PlaylistInterface {
 	/* (non-Javadoc)
 	 * @see org.bragi.playlist.PlaylistInterface#removeMedia(java.lang.String)
 	 */
+	// TODO has to be changed to public void removeMedia(int)
 	@Override
 	public void removeMedia(String uri) {
 		if (uri!=null && !uri.isEmpty() && indexer!=null) { //only do something if uri is not null and not empty
@@ -197,8 +202,10 @@ public class Playlist implements PlaylistInterface {
 	public void insertMedia(int index, String uri) {
 		if (uri!=null && !uri.isEmpty() && indexer!=null) { //only do something if uri is not null and not empty
 			URI uriObject = URI.create(uri);
+			PlaylistEntry entry=new PlaylistEntry();
+			entry.setUri(uriObject);
 			int oldSize=playlist.size();
-			playlist.add(index, uriObject);
+			playlist.add(index, entry);
 			if (oldSize!=playlist.size()) {
 				indexer.indexUri(uri);
 				HashMap<String,Object> eventData=new HashMap<>();
@@ -242,9 +249,9 @@ public class Playlist implements PlaylistInterface {
 			//create generic playlist
 			christophedelory.playlist.Playlist genericPlaylist=new christophedelory.playlist.Playlist();
 			Sequence sequence=genericPlaylist.getRootSequence();
-			for (URI uri : playlist) {
+			for (PlaylistEntry entry : playlist) {
 				Media media=new Media();
-				Content content=new Content(uri);
+				Content content=new Content(entry.getUri());
 				media.setSource(content);
 				sequence.addComponent(media);
 			}
@@ -335,7 +342,7 @@ public class Playlist implements PlaylistInterface {
 		if (query!=null && indexer!=null) {
 			try {
 				List<IndexEntry> filteredMetaData=indexer.filter(query, metaData);
-				retValue=Arrays.asList(filteredMetaData.stream().map(Playlist::createPlaylistEntry).toArray(PlaylistEntry[]::new));
+				retValue=filteredMetaData.stream().map(Playlist::createPlaylistEntry).collect(Collectors.toList());
 //				playlist.stream().filter(entry->filteredMetaData.containsKey(entry))
 //								 .sorted(new PlaylistEntryComparator())
 //								 .forEach(entry->{
