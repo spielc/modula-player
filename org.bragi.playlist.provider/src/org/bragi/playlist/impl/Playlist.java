@@ -20,7 +20,6 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -181,17 +180,15 @@ public class Playlist implements PlaylistInterface {
 	 */
 	// TODO has to be changed to public void removeMedia(int)
 	@Override
-	public void removeMedia(String uri) {
-		if (uri!=null && !uri.isEmpty() && indexer!=null) { //only do something if uri is not null and not empty
-			URI uriObject = URI.create(uri);
-			if (playlist.remove(uriObject)) {
-				try {
-					indexer.removeUri(uri);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-				postEvent(uriObject,PlaylistInterface.REMOVE_EVENT);
+	public void removeMedia(int index) {
+		if (index>=0 && index<playlist.size() && indexer!=null) { //only do something if uri is not null and not empty
+			URI uriObject=playlist.remove(index).getUri();
+			try {
+				indexer.removeUri(uriObject.toString());
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
+			postEvent(uriObject,PlaylistInterface.REMOVE_EVENT);
 		}
 	}
 

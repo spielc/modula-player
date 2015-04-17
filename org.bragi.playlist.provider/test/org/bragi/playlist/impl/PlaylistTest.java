@@ -111,25 +111,25 @@ public class PlaylistTest {
 	@Test
 	public void removeMediaTest() throws URISyntaxException {
 		URI uri=URI.create(MP3_URL);
-		playlist.removeMedia(uri.toString());
+		playlist.removeMedia(0);
 		HashMap<String,URI> eventData=new HashMap<>();
 		eventData.put(PlaylistInterface.URI_EVENTDATA, uri);
 		verify(eventAdmin,times(0)).postEvent(new Event(PlaylistInterface.REMOVE_EVENT,eventData));
-		playlist.removeMedia(null);
+		playlist.removeMedia(-1);
 		eventData.clear();
 		eventData.put(PlaylistInterface.URI_EVENTDATA, null);
 		verify(eventAdmin,times(0)).postEvent(new Event(PlaylistInterface.REMOVE_EVENT,eventData));
-		playlist.removeMedia("");
+		playlist.removeMedia(Integer.MAX_VALUE);
 		eventData.clear();
 		eventData.put(PlaylistInterface.URI_EVENTDATA, URI.create(""));
 		verify(eventAdmin,times(0)).postEvent(new Event(PlaylistInterface.REMOVE_EVENT,eventData));
 		playlist.addMedia(uri.toString());
 		URI tmpUri=URI.create("file:///tmp/bla.mp3");
-		playlist.removeMedia(tmpUri.toString());
+		playlist.removeMedia(0);
 		eventData.clear();
 		eventData.put(PlaylistInterface.URI_EVENTDATA, tmpUri);
 		verify(eventAdmin,times(0)).postEvent(new Event(PlaylistInterface.REMOVE_EVENT,eventData));
-		playlist.removeMedia(uri.toString());
+		playlist.removeMedia(0);
 		eventData.clear();
 		eventData.put(PlaylistInterface.URI_EVENTDATA, uri);
 		verify(eventAdmin,times(1)).postEvent(new Event(PlaylistInterface.REMOVE_EVENT,eventData));

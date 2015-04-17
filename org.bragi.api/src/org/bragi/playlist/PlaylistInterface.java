@@ -30,7 +30,7 @@ public interface PlaylistInterface {
 	public static final String INDEX_EVENTDATA = "org/bragi/playlist/eventData/INDEX";
 	//methods for working with playlists
 	public void addMedia(String uri) throws URISyntaxException;
-	public void removeMedia(String uri);
+	public void removeMedia(int index);
 	public void insertMedia(int index, String uri);
 	public void shuffle();
 	public void toggleRepeat();
