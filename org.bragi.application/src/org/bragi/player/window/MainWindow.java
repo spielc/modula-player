@@ -7,7 +7,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.EnumSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -429,13 +428,8 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 					if (e.keyCode==SWT.DEL)
 					{
 						if (playlist!=null) {
-							StructuredSelection selection=(StructuredSelection)playlistTableViewer.getSelection();
-							Iterator iter=selection.iterator();
-							while(iter.hasNext()) {
-								String line=iter.next().toString();
-								String uriString=MainWindow.extractValueFromLine("URI", line);
-								playlist.removeMedia(uriString);
-							}
+							for (int selectedIndex : playlistTable.getSelectionIndices())
+								playlist.removeMedia(selectedIndex);
 							playlistTableViewer.refresh();
 						}
 					}
