@@ -12,13 +12,12 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.Map;
 
-import org.bragi.indexer.IndexEntry;
 import org.bragi.indexer.IndexerInterface;
 import org.bragi.metadata.MetaDataEnum;
 import org.bragi.metadata.MetaDataProviderInterface;
@@ -63,29 +62,19 @@ public class PlaylistTest {
 		indexer = mock(IndexerInterface.class);
 		when(metaDataProvider.getMetaData(MP3_URL, EnumSet.allOf(MetaDataEnum.class))).thenReturn(new String[]{ALBUM, ARTIST, "k3b", "Metal", "en", "", RATING_TRACK_1, ALBUM, TRACKNAME_TRACK_1, "4", "http://www.ex-deo.com"});
 		when(metaDataProvider.getMetaData(MP3_1_URL, EnumSet.allOf(MetaDataEnum.class))).thenReturn(new String[]{ALBUM, ARTIST, "k3b", "Metal", "en", "", RATING_TRACK_2, ALBUM, "34531", TRACK_NR, "http://www.ex-deo.com"});
-		List<IndexEntry> retValue = new ArrayList<>();
+		Map<URI, Map<MetaDataEnum, String>> retValue = new Hashtable<>();
 		Hashtable<MetaDataEnum, String> metaDataEnumMap = new Hashtable<>();
-		IndexEntry entry1=new IndexEntry();
-		entry1.setUri(URI.create(MP3_URL));
-		entry1.setMetaData(metaDataEnumMap);
-		retValue.add(entry1);
+		retValue.put(URI.create(MP3_URL), metaDataEnumMap);
 		Hashtable<MetaDataEnum, String> metaDataEnumMap2 = new Hashtable<>();
-		IndexEntry entry2=new IndexEntry();
-		entry2.setUri(URI.create(MP3_URL));
-		entry2.setMetaData(metaDataEnumMap2);
-		retValue.add(entry2);
-		retValue.add(entry1);
+		retValue.put(URI.create(MP3_1_URL), metaDataEnumMap2);
 		when(indexer.filter(SUCCESSFUL_QUERY,MetaDataEnum.values())).thenReturn(retValue);
-		List<IndexEntry> retValue2 = new ArrayList<>();
-		IndexEntry entry3=new IndexEntry();
-		entry3.setUri(URI.create("33"));
-		entry3.setMetaData(metaDataEnumMap);
-		retValue2.add(entry3);
+		Map<URI, Map<MetaDataEnum, String>> retValue2 = new Hashtable<>();
+		retValue2.put(URI.create(MP3_URL), metaDataEnumMap);
 		when(indexer.filter(AND_QUERY,MetaDataEnum.values())).thenReturn(retValue2);
 		when(indexer.filter(OR_QUERY,MetaDataEnum.values())).thenReturn(retValue);
-		when(indexer.filter("",MetaDataEnum.values())).thenReturn(new ArrayList<IndexEntry>());
-		when(indexer.filter(null,MetaDataEnum.values())).thenReturn(new ArrayList<IndexEntry>());
-		when(indexer.filter(UNSUCCESSFUL_QUERY,MetaDataEnum.values())).thenReturn(new ArrayList<IndexEntry>());
+		when(indexer.filter("",MetaDataEnum.values())).thenReturn(new Hashtable<URI, Map<MetaDataEnum, String>>());
+		when(indexer.filter(null,MetaDataEnum.values())).thenReturn(new Hashtable<URI, Map<MetaDataEnum, String>>());
+		when(indexer.filter(UNSUCCESSFUL_QUERY,MetaDataEnum.values())).thenReturn(new Hashtable<URI, Map<MetaDataEnum, String>>());
 		
 		playlist.setEventAdmin(eventAdmin);
 		playlist.setIndexer(indexer);
@@ -125,7 +114,7 @@ public class PlaylistTest {
 		verify(eventAdmin,times(0)).postEvent(new Event(PlaylistInterface.REMOVE_EVENT,eventData));
 		playlist.addMedia(uri.toString());
 		URI tmpUri=URI.create("file:///tmp/bla.mp3");
-		playlist.removeMedia(0);
+		playlist.removeMedia(-1);
 		eventData.clear();
 		eventData.put(PlaylistInterface.URI_EVENTDATA, tmpUri);
 		verify(eventAdmin,times(0)).postEvent(new Event(PlaylistInterface.REMOVE_EVENT,eventData));
@@ -197,9 +186,8 @@ public class PlaylistTest {
 		};
 		playlist.addMedia(uris[0].toString());
 		playlist.addMedia(uris[1].toString());
-		playlist.addMedia(uris[0].toString());
 		List<PlaylistEntry> filteredURIs=playlist.filter(SUCCESSFUL_QUERY,MetaDataEnum.values()); //test regular, simple query
-		Assert.assertEquals(3, filteredURIs.size());
+		Assert.assertEquals(2, filteredURIs.size());
 		filteredURIs=playlist.filter("",MetaDataEnum.values()); //test empty query
 		Assert.assertEquals(0, filteredURIs.size());
 		filteredURIs=playlist.filter(null,MetaDataEnum.values()); //test null query
@@ -209,6 +197,6 @@ public class PlaylistTest {
 		filteredURIs=playlist.filter(AND_QUERY,MetaDataEnum.values()); //test AND-query
 		Assert.assertEquals(1, filteredURIs.size());
 		filteredURIs=playlist.filter(OR_QUERY,MetaDataEnum.values()); //test OR-query
-		Assert.assertEquals(3, filteredURIs.size());
+		Assert.assertEquals(2, filteredURIs.size());
 	}
 }

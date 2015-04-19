@@ -12,14 +12,13 @@
 package org.bragi.LuceneIndexer;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.net.URI;
+import java.util.Hashtable;
 import java.util.Map;
 
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.store.RAMDirectory;
 import org.bragi.LuceneIndexer.internal.LuceneIndexer;
-import org.bragi.indexer.IndexEntry;
 import org.bragi.indexer.IndexerInterface;
 import org.bragi.metadata.MetaDataEnum;
 import org.bragi.metadata.MetaDataProviderInterface;
@@ -94,9 +93,9 @@ public class RAMBasedLuceneIndexer implements IndexerInterface {
 	}
 	
 	@Override
-	public List<IndexEntry> filter(String query,
+	public Map<URI, Map<MetaDataEnum, String>> filter(String query,
 			MetaDataEnum... metaData) throws Exception {
-		List<IndexEntry> retValue=new ArrayList<>();
+		Map<URI, Map<MetaDataEnum, String>> retValue=new Hashtable<>();
 		if (indexer!=null)
 			retValue=indexer.filter(query, metaData);
 		return retValue;

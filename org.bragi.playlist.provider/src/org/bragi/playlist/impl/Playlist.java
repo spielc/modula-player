@@ -24,7 +24,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -178,7 +178,6 @@ public class Playlist implements PlaylistInterface {
 	/* (non-Javadoc)
 	 * @see org.bragi.playlist.PlaylistInterface#removeMedia(java.lang.String)
 	 */
-	// TODO has to be changed to public void removeMedia(int)
 	@Override
 	public void removeMedia(int index) {
 		if (index>=0 && index<playlist.size() && indexer!=null) { //only do something if uri is not null and not empty
@@ -338,9 +337,12 @@ public class Playlist implements PlaylistInterface {
 		List<PlaylistEntry> retValue = new ArrayList<>();
 		if (query!=null && indexer!=null) {
 			try {
-				List<IndexEntry> filteredMetaData=indexer.filter(query, metaData);
-				retValue=filteredMetaData.stream().map(Playlist::createPlaylistEntry).collect(Collectors.toList());
-//				playlist.stream().filter(entry->filteredMetaData.containsKey(entry))
+				Map<URI,Map<MetaDataEnum,String>> filteredMetaData=indexer.filter(query, metaData);
+				//retValue=filteredMetaData.stream().map(Playlist::createPlaylistEntry).collect(Collectors.toList());
+				playlist.stream().filter(entry->filteredMetaData.containsKey(entry.getUri())).forEach(entry->{
+					entry.setMetaData(filteredMetaData.get(entry.getUri()));
+					retValue.add(entry);
+				});
 //								 .sorted(new PlaylistEntryComparator())
 //								 .forEach(entry->{
 //									 PlaylistEntry playlistEntry=new PlaylistEntry();

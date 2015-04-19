@@ -12,7 +12,8 @@
 package org.bragi.indexer;
 
 import java.io.IOException;
-import java.util.List;
+import java.net.URI;
+import java.util.Map;
 
 import org.bragi.metadata.MetaDataEnum;
 import org.bragi.metadata.MetaDataProviderInterface;
@@ -51,8 +52,7 @@ public interface IndexerInterface {
 	 * @return a List<Dictionary<MetaDataEnum,String>> containing a List of Dictionary-objects that match the filter-expression
 	 * @throws Exception
 	 */
-	// TODO indexer must return List<IndexEntry> objects
-	public List<IndexEntry> filter(String query, MetaDataEnum... metaData) throws Exception;
+	public Map<URI,Map<MetaDataEnum,String>> filter(String query, MetaDataEnum... metaData) throws Exception;
 	
 	/**
 	 * 

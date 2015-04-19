@@ -22,11 +22,11 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.Map;
 
 import junit.framework.Assert;
 
 import org.bragi.collection.CollectionEntry;
-import org.bragi.indexer.IndexEntry;
 import org.bragi.indexer.IndexerInterface;
 import org.bragi.metadata.MetaDataEnum;
 import org.junit.Before;
@@ -120,19 +120,13 @@ public class LuceneCollectionTest {
 		String file1 = LuceneCollectionTest.class.getClassLoader().getResource("a/b/test.mp3").toURI().toString();
 		String file2 = LuceneCollectionTest.class.getClassLoader().getResource("a/b/c/test.ogg").toURI().toString();
 		String query = MetaDataEnum.ARTIST.name()+":\"Kataklysm\"";
-		List<IndexEntry> retValue = new ArrayList<>();
-		IndexEntry entry1=new IndexEntry();
-		entry1.setUri(URI.create("1"));
-		entry1.setMetaData(new Hashtable<MetaDataEnum, String>());
-		retValue.add(entry1);
-		IndexEntry entry2=new IndexEntry();
-		entry2.setUri(URI.create("2"));
-		entry2.setMetaData(new Hashtable<MetaDataEnum, String>());
-		retValue.add(entry2);
+		Map<URI,Map<MetaDataEnum, String>> retValue = new Hashtable<>();
+		retValue.put(URI.create("1"), new Hashtable<MetaDataEnum, String>());
+		retValue.put(URI.create("2"), new Hashtable<MetaDataEnum, String>());
 		when(indexer.filter(query,MetaDataEnum.values())).thenReturn(retValue);
-		when(indexer.filter(query,new MetaDataEnum[]{})).thenReturn(new ArrayList<>());
-		when(indexer.filter("")).thenReturn(new ArrayList<>());
-		when(indexer.filter(null)).thenReturn(new ArrayList<>());
+		when(indexer.filter(query,new MetaDataEnum[]{})).thenReturn(new Hashtable<>());
+		when(indexer.filter("")).thenReturn(new Hashtable<>());
+		when(indexer.filter(null)).thenReturn(new Hashtable<>());
 		List<CollectionEntry> filtered=collection.filter(query,MetaDataEnum.values());
 		Assert.assertEquals(2, filtered.size());
 		filtered=collection.filter(QUERY, new MetaDataEnum[]{});

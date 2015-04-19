@@ -14,15 +14,12 @@ package org.bragi.LuceneIndexer.internal;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.Hashtable;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
-import org.apache.lucene.document.StoredField;
 import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
@@ -33,13 +30,9 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.SearcherFactory;
 import org.apache.lucene.search.SearcherManager;
-import org.apache.lucene.search.Sort;
-import org.apache.lucene.search.SortField;
-import org.apache.lucene.search.TopDocs;
-import org.apache.lucene.search.TopFieldDocs;
+import org.apache.lucene.search.TopScoreDocCollector;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.Version;
-import org.bragi.indexer.IndexEntry;
 import org.bragi.metadata.MetaDataEnum;
 import org.bragi.metadata.MetaDataProviderInterface;
 
@@ -93,9 +86,7 @@ public class LuceneIndexer {
 			if (metaData.length==0)
 				return false;
 			Document doc = new Document();
-			//doc.add(new LongField(INSERTIONCOUNTCONSTANT, insertionCount++, LongField.Store.YES));
-			//doc.add(new Field (INSERTIONCOUNTCONSTANT, String.valueOf(insertionCount++), Field.Store.NO, Field.Index.NOT_ANALYZED));
-//			doc.add(new StoredField(INSERTIONCOUNTCONSTANT, insertionCount++));
+			//doc.add(new LongField(MetaDataEnum.INSERTION_TIME.name(), System.currentTimeMillis(), LongField.Store.YES));
 			doc.add(new TextField(URICONSTANT, uri, TextField.Store.YES));
 			int i=0;
 			for (MetaDataEnum meta : metaDataToIndexSet) {
@@ -149,10 +140,10 @@ public class LuceneIndexer {
 	/* (non-Javadoc)
 	 * @see org.bragi.playlist.LucenePlaylist.internal.IndexerInterface#filter(java.lang.String)
 	 */
-	public List<IndexEntry> filter(String query, MetaDataEnum... metaData) throws ParseException, IOException {
+	public Map<URI, Map<MetaDataEnum, String>> filter(String query, MetaDataEnum... metaData) throws ParseException, IOException {
 		if (query==null || query.isEmpty() || metaData.length==0)
-			return new ArrayList<>();
-		List<IndexEntry> filteredMetaData = new ArrayList<>();
+			return new Hashtable<>();
+		Map<URI, Map<MetaDataEnum, String>> filteredMetaData = new Hashtable<>();
 		//make sure SearcherManager is initialized
 		if (manager==null)
 			manager=new SearcherManager(indexWriter, true, new SearcherFactory());
@@ -160,32 +151,18 @@ public class LuceneIndexer {
 		
 		try {
 			Query q = queryParser.parse(query);
-			TopDocs docs=searcher.search(q, null, Integer.MAX_VALUE);
-			for (ScoreDoc hit : docs.scoreDocs) {
+			TopScoreDocCollector collector = TopScoreDocCollector.create(100, true);
+			searcher.search(q, collector);
+			for (ScoreDoc hit : collector.topDocs().scoreDocs) {
 				int docId = hit.doc;
 				Document hitDocument=searcher.doc(docId);
 				Map<MetaDataEnum, String> metaDataDictionary=new Hashtable<>();
 				for (MetaDataEnum metaDataEnum : metaData) {
 					metaDataDictionary.put(metaDataEnum, hitDocument.getField(metaDataEnum.name()).stringValue());
 				}
-				IndexEntry entry=new IndexEntry();
-				entry.setUri(URI.create(hitDocument.getField(URICONSTANT).stringValue()));
-				entry.setMetaData(metaDataDictionary);
-				filteredMetaData.add(entry);
+				filteredMetaData.put(URI.create(hitDocument.getField(URICONSTANT).stringValue()),metaDataDictionary);
 				//filteredURIs.add();
 			}
-//			TopScoreDocCollector collector = TopScoreDocCollector.create(100, true);
-//			searcher.search(q, collector);
-//			for (ScoreDoc hit : collector.topDocs().scoreDocs) {
-//				int docId = hit.doc;
-//				Document hitDocument=searcher.doc(docId);
-//				Map<MetaDataEnum, String> metaDataDictionary=new Hashtable<>();
-//				for (MetaDataEnum metaDataEnum : metaData) {
-//					metaDataDictionary.put(metaDataEnum, hitDocument.getField(metaDataEnum.name()).stringValue());
-//				}
-//				filteredMetaData.put(URI.create(hitDocument.getField(URICONSTANT).stringValue()),metaDataDictionary);
-//				//filteredURIs.add();
-//			}
 		} finally {
 			manager.release(searcher);
 		}
