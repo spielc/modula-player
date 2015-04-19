@@ -21,14 +21,12 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.bragi.indexer.IndexEntry;
 import org.bragi.indexer.IndexerInterface;
 import org.bragi.metadata.MetaDataEnum;
 import org.bragi.playlist.PlaylistEntry;
@@ -57,16 +55,16 @@ public class Playlist implements PlaylistInterface {
 	 * @author christoph
 	 *
 	 */
-	private final class PlaylistEntryComparator implements Comparator<IndexEntry> {
-		
-		@Override
-		public int compare(IndexEntry o1, IndexEntry o2) {
-			Integer index1=playlist.indexOf(o1.getUri());
-			Integer index2=playlist.indexOf(o2.getUri());
-			return index1.compareTo(index2);
-		}
-		
-	}
+//	private final class PlaylistEntryComparator implements Comparator<IndexEntry> {
+//		
+//		@Override
+//		public int compare(IndexEntry o1, IndexEntry o2) {
+//			Integer index1=playlist.indexOf(o1.getUri());
+//			Integer index2=playlist.indexOf(o2.getUri());
+//			return index1.compareTo(index2);
+//		}
+//		
+//	}
 	
 	/**
 	 * Private class which implements a PlaylistVisitor, which is used when loading a playlist to fill the playlist
@@ -355,17 +353,5 @@ public class Playlist implements PlaylistInterface {
 			}
 		}
 		return retValue;
-	}
-
-	/**
-	 * Static helper method to transform a IndexEntry-object to a PlaylistEntry-object
-	 * @param entry
-	 * @return
-	 */
-	private static PlaylistEntry createPlaylistEntry(IndexEntry entry) {
-		PlaylistEntry playlistEntry=new PlaylistEntry();
-		playlistEntry.setUri(entry.getUri());
-		playlistEntry.setMetaData(entry.getMetaData());
-		return playlistEntry;
 	}
 }
