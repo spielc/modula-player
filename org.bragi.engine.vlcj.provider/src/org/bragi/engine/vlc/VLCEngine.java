@@ -46,7 +46,7 @@ public class VLCEngine implements EngineInterface, EventHandler {
 		playerComponent=new VLCMediaPlayerComponent();
 		player=playerComponent.getMediaListPlayer();
 		player.setMediaPlayer(playerComponent.getMediaPlayer());
-		currentIndex=0;
+		currentIndex=-1;
 	}
 	
 	@org.osgi.service.component.annotations.Reference
