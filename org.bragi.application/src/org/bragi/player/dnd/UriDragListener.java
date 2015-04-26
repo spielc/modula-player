@@ -76,8 +76,8 @@ public class UriDragListener implements DragSourceListener {
 	public void dragSetData(DragSourceEvent evt) {
 		System.out.println("dragSetData");
 		StructuredSelection selection=(StructuredSelection)treeViewer.getSelection();
-		TreeNode obj=(TreeNode)selection.getFirstElement();
-		System.out.println(obj.getQuery());
+		TreeNode node=(TreeNode)selection.getFirstElement();
+		System.out.println(node.getQuery());
 //		StringBuffer buffer=new StringBuffer();
 //		if (collection!=null) {
 //			Map<URI, Map<MetaDataEnum, String>> filteredCollection=collection.filter(obj.getQuery(), MetaDataEnum.values());
@@ -91,7 +91,7 @@ public class UriDragListener implements DragSourceListener {
 //			}
 //		}
 		if (collection!=null) {
-			List<CollectionEntry> filteredCollection=collection.filter(obj.getQuery(), MetaDataEnum.values());
+			List<CollectionEntry> filteredCollection=collection.filter(node.getQuery(), MetaDataEnum.values());
 			evt.data=QueryHelpers.QueryResult2String(filteredCollection);
 		}
 		else

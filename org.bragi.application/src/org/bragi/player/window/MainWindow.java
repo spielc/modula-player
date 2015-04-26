@@ -8,6 +8,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -116,7 +117,8 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 		  public Object[] getElements(Object inputElement) {
 			  PlaylistInterface playlist=(PlaylistInterface)inputElement;
 			  List<PlaylistEntry> playlistEntries = playlist.filter("*", MetaDataEnum.values());
-			  Object[] lines=playlistEntries.stream().map(entry->"URI='"+entry.getUri().toString()+"'"+entry.getMetaData().entrySet().stream().map(metaData->";;"+metaData.getKey().name()+"='"+metaData.getValue()+"'").collect(Collectors.joining())).collect(Collectors.toList()).toArray();
+			  final AtomicInteger i=new AtomicInteger(-1);
+			  Object[] lines=playlistEntries.stream().map(entry->(i.incrementAndGet())+";;URI='"+entry.getUri().toString()+"'"+entry.getMetaData().entrySet().stream().map(metaData->";;"+metaData.getKey().name()+"='"+metaData.getValue()+"'").collect(Collectors.joining())).collect(Collectors.toList()).toArray();
 			  return lines;
 		  }
 
