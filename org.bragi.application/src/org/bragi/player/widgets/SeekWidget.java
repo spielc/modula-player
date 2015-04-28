@@ -186,21 +186,24 @@ public class SeekWidget extends Composite {
 	 * Pause the progressThread
 	 */
 	public void pause() {
-		progressThread.pause();
+		if (progressThread!=null)
+			progressThread.pause();
 	}
 	
 	/**
 	 * Resume the progressThread
 	 */
 	public void resume() {
-		progressThread.unpause();
+		if (progressThread!=null)
+			progressThread.unpause();
 	}
 	
 	/**
 	 * Kill the progressThread
 	 */
 	public void terminate() {
-		progressThread.terminate();
+		if (progressThread!=null)
+			progressThread.terminate();
 	}
 	
 	/**
