@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -91,24 +92,12 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 			if ((currentState==EngineStateEnum.PLAYING) || (currentState==EngineStateEnum.PAUSED)) {
 				String row=data.toString();
 				PlaylistInterface playlist=(PlaylistInterface)playlistTableViewer.getInput();
-				List<PlaylistEntry> playlistEntries = playlist.filter("*", MetaDataEnum.values());
-				String[] lines=playlistEntries.stream().map(entry->"URI='"+entry.getUri().toString()+"'"+entry.getMetaData().entrySet().stream().map(metaData->";;"+metaData.getKey().name()+"='"+metaData.getValue()+"'")+"\n").toString().split("\n");
-				int index=0;
-				for (String line : lines) {
-					if (line.equals(row)) {
-						if (index==currentSongIndex)
-							return Display.getCurrent().getSystemColor(SWT.COLOR_GRAY);
-					}
-					index++;
-				}
+				List<String> lines=Arrays.asList(playlist2StringArray(playlist));
+				if (currentSongIndex==lines.indexOf(row))
+					return Display.getCurrent().getSystemColor(SWT.COLOR_GRAY);
 			}
 			return super.getBackground(data);
 		}
-		
-		
-		
-		
-		
 	}
 	
 	private class TableContentProvider implements IStructuredContentProvider {
@@ -116,9 +105,7 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 		  @Override
 		  public Object[] getElements(Object inputElement) {
 			  PlaylistInterface playlist=(PlaylistInterface)inputElement;
-			  List<PlaylistEntry> playlistEntries = playlist.filter("*", MetaDataEnum.values());
-			  final AtomicInteger i=new AtomicInteger(-1);
-			  Object[] lines=playlistEntries.stream().map(entry->(i.incrementAndGet())+";;URI='"+entry.getUri().toString()+"'"+entry.getMetaData().entrySet().stream().map(metaData->";;"+metaData.getKey().name()+"='"+metaData.getValue()+"'").collect(Collectors.joining())).collect(Collectors.toList()).toArray();
+			  Object[] lines = playlist2StringArray(playlist);
 			  return lines;
 		  }
 
@@ -570,5 +557,12 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 		this.currentState=newState;
 		updateUi();
 		
+	}
+
+	private static String[] playlist2StringArray(PlaylistInterface playlist) {
+		List<PlaylistEntry> playlistEntries = playlist.filter("*", MetaDataEnum.values());
+		final AtomicInteger i=new AtomicInteger(-1);
+		String[] lines=playlistEntries.stream().map(entry->(i.incrementAndGet())+";;URI='"+entry.getUri().toString()+"'"+entry.getMetaData().entrySet().stream().map(metaData->";;"+metaData.getKey().name()+"='"+metaData.getValue()+"'").collect(Collectors.joining())).toArray(String[]::new);
+		return lines;
 	}
 }
