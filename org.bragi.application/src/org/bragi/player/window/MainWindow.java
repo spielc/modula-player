@@ -111,33 +111,7 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 
 		} 
 	
-	private class GuiThread extends Thread {
-		
-		private MainWindow mainWindow;
-		
-		@Override
-		public void run() {
-			try {
-				mainWindow.setBlockOnOpen(true);
-				mainWindow.open();
-				Display.getCurrent().dispose();
-				if (playlist!=null) {
-					Path dirPath=Paths.get("/home/christoph/.bragi/Playlist/");
-					if (!Files.exists(dirPath))
-						Files.createDirectory(dirPath);
-					Path playlistPath=dirPath.resolve("current.m3u");
-					playlist.save(playlistPath.toUri().toString());
-				}
-				System.exit(0);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		}
-		
-		
-	}
-	
-	private GuiThread thread;
+	private Thread thread;
 	
 	private EngineInterface engine;
 	private List<CollectionInterface> collections;
@@ -229,8 +203,24 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 		addMenuBar();
 		addStatusLine();
 		//start gui-thread
-		thread=new GuiThread();
-		thread.mainWindow=this;
+		Runnable mainLoop = () -> {
+			try {
+				setBlockOnOpen(true);
+				open();
+				Display.getCurrent().dispose();
+				if (playlist!=null) {
+					Path dirPath=Paths.get("/home/christoph/.bragi/Playlist/");
+					if (!Files.exists(dirPath))
+						Files.createDirectory(dirPath);
+					Path playlistPath=dirPath.resolve("current.m3u");
+					playlist.save(playlistPath.toUri().toString());
+				}
+				System.exit(0);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		};
+		thread=new Thread(mainLoop);
 		thread.start();
 	}
 
