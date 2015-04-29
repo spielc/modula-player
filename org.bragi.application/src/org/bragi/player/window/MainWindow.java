@@ -177,9 +177,6 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 		collections.add(collection);
 		getShell().getDisplay().asyncExec(()->{
 			collectionWidget.addCollection(collection);
-//				collectionTreeContentProvider.addCollection(collection);
-////				collectionTreeViewer.refresh();
-//				dragListener.setCollection(collection);
 		});
 	}
 	
@@ -257,34 +254,6 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 			{
 				collectionWidget = new CollectionWidget(container, SWT.NONE);
 				collectionWidget.setLayoutData(BorderLayout.WEST);
-//				collectionTreeViewer = new TreeViewer(container, SWT.BORDER);
-//				collectionTreeContentProvider.setViewer(collectionTreeViewer);
-//				dragListener.setTreeViewer(collectionTreeViewer);
-//				collectionTreeViewer.setContentProvider(collectionTreeContentProvider);
-//				collectionTreeViewer.setLabelProvider(new CollectionTreeLabelProvider());
-//				collectionTreeViewer.addDragSupport(operations, transferTypes, dragListener);
-//				collectionTreeViewer.addDoubleClickListener(new IDoubleClickListener() {
-//					
-//					@Override
-//					public void doubleClick(DoubleClickEvent event) {
-//						StructuredSelection selection=(StructuredSelection)collectionTreeViewer.getSelection();
-//						TreeNode node=(TreeNode)selection.getFirstElement();
-//						if (node.getType().equals(CollectionTreeContentProvider.ROOT) && collections.get(0)!=null) {
-//							DirectoryDialog dialog=new DirectoryDialog(getShell());
-//							String directory=dialog.open();
-//							if (directory!=null) {
-//								try {
-//									collections.get(0).addCollectionRoot(new File(directory).toURI().toString());
-//								} catch (URISyntaxException e) {
-//									// TODO Auto-generated catch block
-//									e.printStackTrace();
-//								}
-//							}
-//						}
-//					}
-//				});
-//				collectionTree = collectionTreeViewer.getTree();
-//				collectionTree.setLayoutData(BorderLayout.WEST);
 				{
 					engineComposite = new Composite(container, SWT.NONE);
 					engineComposite.setLayoutData(BorderLayout.SOUTH);
@@ -375,7 +344,6 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 						});
 					}
 				}
-//				collectionTreeViewer.setInput(new Object());
 			}
 			{
 				for (MetaDataEnum metaData : EnumSet.of(MetaDataEnum.TITLE, MetaDataEnum.ARTIST, MetaDataEnum.ALBUM)) {
