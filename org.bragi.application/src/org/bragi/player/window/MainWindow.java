@@ -1,7 +1,5 @@
 package org.bragi.player.window;
 
-import java.io.File;
-import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -17,13 +15,10 @@ import java.util.stream.Collectors;
 import org.bragi.collection.CollectionInterface;
 import org.bragi.engine.EngineInterface;
 import org.bragi.metadata.MetaDataEnum;
-import org.bragi.player.dnd.UriDragListener;
 import org.bragi.player.dnd.UriDropAdapter;
-import org.bragi.player.model.TreeNode;
 import org.bragi.player.statemachines.EngineStateChangeListener;
 import org.bragi.player.statemachines.EngineStateEnum;
-import org.bragi.player.viewers.CollectionTreeContentProvider;
-import org.bragi.player.viewers.CollectionTreeLabelProvider;
+import org.bragi.player.widgets.CollectionWidget;
 import org.bragi.player.widgets.SeekWidget;
 import org.bragi.playlist.PlaylistEntry;
 import org.bragi.playlist.PlaylistInterface;
@@ -35,10 +30,8 @@ import org.eclipse.jface.viewers.DoubleClickEvent;
 import org.eclipse.jface.viewers.IDoubleClickListener;
 import org.eclipse.jface.viewers.IStructuredContentProvider;
 import org.eclipse.jface.viewers.ITableLabelProvider;
-import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.jface.viewers.TableViewer;
 import org.eclipse.jface.viewers.TableViewerColumn;
-import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.jface.window.ApplicationWindow;
 import org.eclipse.swt.SWT;
@@ -58,13 +51,11 @@ import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
-import org.eclipse.swt.widgets.DirectoryDialog;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Slider;
 import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableColumn;
-import org.eclipse.swt.widgets.Tree;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 
@@ -157,12 +148,7 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 	private UriDropAdapter dropAdapter;
 
 	private Composite container;
-	private Tree collectionTree;
-	private TreeViewer collectionTreeViewer;
-
-	private CollectionTreeContentProvider collectionTreeContentProvider;
-
-	private UriDragListener dragListener;
+	
 	private Composite engineComposite;
 	private Button previousButton;
 	private Button playButton;
@@ -173,6 +159,7 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 	private Slider volumeSlider;
 	
 	private SeekWidget seekWidget;
+	private CollectionWidget collectionWidget;
 	
 	@org.osgi.service.component.annotations.Reference(cardinality=ReferenceCardinality.OPTIONAL, policy=ReferencePolicy.DYNAMIC)
 	public void setEngine(EngineInterface pEngine) {
@@ -188,18 +175,19 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 	@org.osgi.service.component.annotations.Reference(cardinality=ReferenceCardinality.MULTIPLE, policy=ReferencePolicy.DYNAMIC)
 	public void addCollection(CollectionInterface collection) {
 		collections.add(collection);
-		if (collectionTreeContentProvider!=null) {
-			getShell().getDisplay().asyncExec(()->{
-				collectionTreeContentProvider.addCollection(collection);
-				collectionTreeViewer.refresh();
-				dragListener.setCollection(collection);
-			});
-			
-		}
+		getShell().getDisplay().asyncExec(()->{
+			collectionWidget.addCollection(collection);
+//				collectionTreeContentProvider.addCollection(collection);
+////				collectionTreeViewer.refresh();
+//				dragListener.setCollection(collection);
+		});
 	}
 	
 	public void removeCollection(CollectionInterface collection) {
 		collections.remove(collection);
+		getShell().getDisplay().asyncExec(()->{
+			collectionWidget.removeCollection(collection);
+		});
 	}
 	
 	@org.osgi.service.component.annotations.Reference(cardinality=ReferenceCardinality.OPTIONAL, policy=ReferencePolicy.DYNAMIC)
@@ -238,8 +226,6 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 	public MainWindow() {
 		super(null);
 		currentSongIndex = 0;
-		collectionTreeContentProvider = new CollectionTreeContentProvider();
-		dragListener = new UriDragListener();
 		collections=new ArrayList<>();
 		createActions();
 		addCoolBar(SWT.FLAT);
@@ -269,34 +255,36 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 			playlistTable.setLayoutData(BorderLayout.EAST);
 			playlistTable.setHeaderVisible(true);
 			{
-				collectionTreeViewer = new TreeViewer(container, SWT.BORDER);
-				collectionTreeContentProvider.setViewer(collectionTreeViewer);
-				dragListener.setTreeViewer(collectionTreeViewer);
-				collectionTreeViewer.setContentProvider(collectionTreeContentProvider);
-				collectionTreeViewer.setLabelProvider(new CollectionTreeLabelProvider());
-				collectionTreeViewer.addDragSupport(operations, transferTypes, dragListener);
-				collectionTreeViewer.addDoubleClickListener(new IDoubleClickListener() {
-					
-					@Override
-					public void doubleClick(DoubleClickEvent event) {
-						StructuredSelection selection=(StructuredSelection)collectionTreeViewer.getSelection();
-						TreeNode node=(TreeNode)selection.getFirstElement();
-						if (node.getType().equals(CollectionTreeContentProvider.ROOT) && collections.get(0)!=null) {
-							DirectoryDialog dialog=new DirectoryDialog(getShell());
-							String directory=dialog.open();
-							if (directory!=null) {
-								try {
-									collections.get(0).addCollectionRoot(new File(directory).toURI().toString());
-								} catch (URISyntaxException e) {
-									// TODO Auto-generated catch block
-									e.printStackTrace();
-								}
-							}
-						}
-					}
-				});
-				collectionTree = collectionTreeViewer.getTree();
-				collectionTree.setLayoutData(BorderLayout.WEST);
+				collectionWidget = new CollectionWidget(container, SWT.NONE);
+				collectionWidget.setLayoutData(BorderLayout.WEST);
+//				collectionTreeViewer = new TreeViewer(container, SWT.BORDER);
+//				collectionTreeContentProvider.setViewer(collectionTreeViewer);
+//				dragListener.setTreeViewer(collectionTreeViewer);
+//				collectionTreeViewer.setContentProvider(collectionTreeContentProvider);
+//				collectionTreeViewer.setLabelProvider(new CollectionTreeLabelProvider());
+//				collectionTreeViewer.addDragSupport(operations, transferTypes, dragListener);
+//				collectionTreeViewer.addDoubleClickListener(new IDoubleClickListener() {
+//					
+//					@Override
+//					public void doubleClick(DoubleClickEvent event) {
+//						StructuredSelection selection=(StructuredSelection)collectionTreeViewer.getSelection();
+//						TreeNode node=(TreeNode)selection.getFirstElement();
+//						if (node.getType().equals(CollectionTreeContentProvider.ROOT) && collections.get(0)!=null) {
+//							DirectoryDialog dialog=new DirectoryDialog(getShell());
+//							String directory=dialog.open();
+//							if (directory!=null) {
+//								try {
+//									collections.get(0).addCollectionRoot(new File(directory).toURI().toString());
+//								} catch (URISyntaxException e) {
+//									// TODO Auto-generated catch block
+//									e.printStackTrace();
+//								}
+//							}
+//						}
+//					}
+//				});
+//				collectionTree = collectionTreeViewer.getTree();
+//				collectionTree.setLayoutData(BorderLayout.WEST);
 				{
 					engineComposite = new Composite(container, SWT.NONE);
 					engineComposite.setLayoutData(BorderLayout.SOUTH);
@@ -387,7 +375,7 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 						});
 					}
 				}
-				collectionTreeViewer.setInput(new Object());
+//				collectionTreeViewer.setInput(new Object());
 			}
 			{
 				for (MetaDataEnum metaData : EnumSet.of(MetaDataEnum.TITLE, MetaDataEnum.ARTIST, MetaDataEnum.ALBUM)) {
