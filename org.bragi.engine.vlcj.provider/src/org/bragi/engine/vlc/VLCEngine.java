@@ -160,11 +160,9 @@ public class VLCEngine implements EngineInterface, EventHandler {
 		Event event=null;
 		if (Math.abs(lastIndex-currentIndex)>1)
 			event=new Event(EngineInterface.JUMP_EVENT,eventProperties);
-		else if (lastIndex<currentIndex) 
-		//else if (lastIndex>currentIndex)
+		else if (lastIndex<currentIndex)
 			event=new Event(EngineInterface.FORWARD_EVENT,eventProperties);
 		else if (lastIndex>currentIndex)
-		//else if (lastIndex<currentIndex)
 			event=new Event(EngineInterface.BACKWARD_EVENT,eventProperties);
 		playerComponent.postEvent(event);
 	}
