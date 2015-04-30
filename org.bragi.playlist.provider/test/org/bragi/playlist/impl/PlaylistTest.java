@@ -114,7 +114,7 @@ public class PlaylistTest {
 		verify(eventAdmin,times(0)).postEvent(new Event(PlaylistInterface.REMOVE_EVENT,eventData));
 		playlist.addMedia(uri.toString());
 		URI tmpUri=URI.create("file:///tmp/bla.mp3");
-		playlist.removeMedia(-1);
+		playlist.removeMedia(0);
 		eventData.clear();
 		eventData.put(PlaylistInterface.URI_EVENTDATA, tmpUri);
 		verify(eventAdmin,times(0)).postEvent(new Event(PlaylistInterface.REMOVE_EVENT,eventData));

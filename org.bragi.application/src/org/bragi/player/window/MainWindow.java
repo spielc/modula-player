@@ -6,18 +6,22 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import org.bragi.collection.CollectionEntry;
 import org.bragi.collection.CollectionInterface;
 import org.bragi.engine.EngineInterface;
 import org.bragi.metadata.MetaDataEnum;
 import org.bragi.player.dnd.UriDragListener;
 import org.bragi.player.dnd.UriDropAdapter;
+import org.bragi.player.helpers.QueryHelpers;
 import org.bragi.player.model.TreeNode;
 import org.bragi.player.statemachines.EngineStateChangeListener;
 import org.bragi.player.statemachines.EngineStateEnum;
@@ -33,6 +37,7 @@ import org.eclipse.jface.viewers.ColumnLabelProvider;
 import org.eclipse.jface.viewers.DoubleClickEvent;
 import org.eclipse.jface.viewers.IDoubleClickListener;
 import org.eclipse.jface.viewers.IStructuredContentProvider;
+import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.ITableLabelProvider;
 import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.jface.viewers.TableViewer;
@@ -205,7 +210,7 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 			getShell().getDisplay().asyncExec(()->{
 				collectionTreeContentProvider.addCollection(collection);
 				collectionTreeViewer.refresh();
-				dragListener.setCollection(collection);
+//				dragListener.setCollection(collection);
 			});
 			
 		}
@@ -245,6 +250,38 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 	}
 	
 
+	private String getCollectionTreeViewerDragSourceEventData() {
+		String retValue="";
+		StructuredSelection selection=(StructuredSelection)collectionTreeViewer.getSelection();
+		TreeNode node=(TreeNode)selection.getFirstElement();
+		// TODO currently we only support one collection
+		if (!collections.isEmpty()) {
+			List<CollectionEntry> filteredCollection=collections.get(0).filter(node.getQuery(), MetaDataEnum.values());
+			retValue = QueryHelpers.QueryResult2String(filteredCollection);
+		}
+		return retValue;
+	}
+	
+	private String getPlaylistTableViewerDragSourceEventData() {
+		String retValue="";
+		if (playlist!=null) {
+			List<PlaylistEntry> playlistEntries = playlist.filter("*", MetaDataEnum.values());
+			final AtomicInteger i=new AtomicInteger(-1);
+			List<String> lines=playlistEntries.stream().map(entry->(i.incrementAndGet())+";;URI='"+entry.getUri().toString()+"'"+entry.getMetaData().entrySet().stream().map(metaData->";;"+metaData.getKey().name()+"='"+metaData.getValue()+"'").collect(Collectors.joining())).collect(Collectors.toList());
+			IStructuredSelection selection = (IStructuredSelection) playlistTableViewer.getSelection();
+			Iterator selectionIterator=selection.iterator();
+			i.set(-1);
+			while (selectionIterator.hasNext()) {
+				Object selectedObject=selectionIterator.next();
+				int index=lines.indexOf(selectedObject);
+				playlist.removeMedia(index-i.incrementAndGet());
+				retValue+=selectedObject.toString()+"\n";
+			}
+		}
+		playlistTableViewer.refresh();
+		return retValue;
+	}
+	
 	/**
 	 * Create the application window,
 	 */
@@ -252,7 +289,7 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 		super(null);
 		currentSongIndex = 0;
 		collectionTreeContentProvider = new CollectionTreeContentProvider();
-		dragListener = new UriDragListener();
+//		dragListener = new UriDragListener();
 		collections=new ArrayList<>();
 		createActions();
 		addCoolBar(SWT.FLAT);
@@ -277,6 +314,7 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 			dropAdapter = new UriDropAdapter(playlistTableViewer);
 			int operations = DND.DROP_COPY;
 		    Transfer[] transferTypes = new Transfer[]{TextTransfer.getInstance()};
+		    playlistTableViewer.addDragSupport(operations, transferTypes, new UriDragListener(this::getPlaylistTableViewerDragSourceEventData));
 		    playlistTableViewer.addDropSupport(operations, transferTypes, dropAdapter);
 			playlistTable = playlistTableViewer.getTable();
 			playlistTable.setLayoutData(BorderLayout.EAST);
@@ -284,10 +322,10 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 			{
 				collectionTreeViewer = new TreeViewer(container, SWT.BORDER);
 				collectionTreeContentProvider.setViewer(collectionTreeViewer);
-				dragListener.setTreeViewer(collectionTreeViewer);
+//				dragListener.setTreeViewer(collectionTreeViewer);
 				collectionTreeViewer.setContentProvider(collectionTreeContentProvider);
 				collectionTreeViewer.setLabelProvider(new CollectionTreeLabelProvider());
-				collectionTreeViewer.addDragSupport(operations, transferTypes, dragListener);
+				collectionTreeViewer.addDragSupport(operations, transferTypes, new UriDragListener(this::getCollectionTreeViewerDragSourceEventData));
 				collectionTreeViewer.addDoubleClickListener(new IDoubleClickListener() {
 					
 					@Override
@@ -430,8 +468,8 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 					if (e.keyCode==SWT.DEL)
 					{
 						if (playlist!=null) {
-							for (int selectedIndex : playlistTable.getSelectionIndices())
-								playlist.removeMedia(selectedIndex);
+							final AtomicInteger i=new AtomicInteger(-1);
+							Arrays.stream(playlistTable.getSelectionIndices()).map(index->index-i.incrementAndGet()).forEach(playlist::removeMedia);
 							playlistTableViewer.refresh();
 						}
 					}
