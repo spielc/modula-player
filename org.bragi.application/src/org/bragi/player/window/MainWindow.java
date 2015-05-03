@@ -15,51 +15,28 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import org.bragi.collection.CollectionInterface;
 import org.bragi.engine.EngineInterface;
-import org.bragi.metadata.MetaDataEnum;
 import org.bragi.player.dnd.UriDragListener;
-import org.bragi.player.dnd.UriDropAdapter;
+import org.bragi.player.widgets.PlaylistWidget;
 import org.bragi.player.statemachines.EngineStateChangeListener;
 import org.bragi.player.statemachines.EngineStateEnum;
 import org.bragi.player.widgets.CollectionWidget;
 import org.bragi.player.widgets.SeekWidget;
-import org.bragi.playlist.PlaylistEntry;
 import org.bragi.playlist.PlaylistInterface;
 import org.eclipse.jface.action.CoolBarManager;
 import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.StatusLineManager;
-import org.eclipse.jface.viewers.ColumnLabelProvider;
-import org.eclipse.jface.viewers.DoubleClickEvent;
-import org.eclipse.jface.viewers.IDoubleClickListener;
-import org.eclipse.jface.viewers.IStructuredContentProvider;
 import org.eclipse.jface.viewers.IStructuredSelection;
-import org.eclipse.jface.viewers.ITableLabelProvider;
-import org.eclipse.jface.viewers.TableViewer;
-import org.eclipse.jface.viewers.TableViewerColumn;
-import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.jface.window.ApplicationWindow;
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.dnd.DND;
-import org.eclipse.swt.dnd.TextTransfer;
-import org.eclipse.swt.dnd.Transfer;
-import org.eclipse.swt.events.KeyAdapter;
-import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.MouseAdapter;
 import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
-import org.eclipse.swt.graphics.Color;
-import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Button;
@@ -68,8 +45,6 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Slider;
-import org.eclipse.swt.widgets.Table;
-import org.eclipse.swt.widgets.TableColumn;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 
@@ -77,63 +52,13 @@ import swing2swt.layout.BorderLayout;
 
 @org.osgi.service.component.annotations.Component(immediate=true) 
 public class MainWindow extends ApplicationWindow implements EngineStateChangeListener { 
-
-	private class TableLabelProvider extends ColumnLabelProvider implements ITableLabelProvider {
-
-		@Override
-		public Image getColumnImage(Object arg0, int arg1) {
-			return null;
-		}
-
-		@Override
-		public String getColumnText(Object data, int column) {
-			String newRow=data.toString();
-			String header=playlistTableViewer.getTable().getColumn(column).getText();
-			return MainWindow.extractValueFromLine(header, newRow);
-		}
-
-		@Override
-		public Color getBackground(Object data) {
-			if ((currentState==EngineStateEnum.PLAYING) || (currentState==EngineStateEnum.PAUSED)) {
-				String row=data.toString();
-				PlaylistInterface playlist=(PlaylistInterface)playlistTableViewer.getInput();
-				List<String> lines=Arrays.asList(playlist2StringArray(playlist));
-				if (currentSongIndex==lines.indexOf(row))
-					return Display.getCurrent().getSystemColor(SWT.COLOR_GRAY);
-			}
-			return super.getBackground(data);
-		}
-	}
-	
-	private class TableContentProvider implements IStructuredContentProvider {
-
-		  @Override
-		  public Object[] getElements(Object inputElement) {
-			  PlaylistInterface playlist=(PlaylistInterface)inputElement;
-			  Object[] lines = playlist2StringArray(playlist);
-			  return lines;
-		  }
-
-		  @Override
-		  public void dispose() {
-		    
-		  }
-
-		  @Override
-		  public void inputChanged(Viewer viewer, Object oldInput, Object newInput) {
-		  }
-
-		} 
+ 
 	
 	private Thread thread;
 	
 	private EngineInterface engine;
 	private List<CollectionInterface> collections;
-	private Table playlistTable;
-	private TableViewer playlistTableViewer;
 	private PlaylistInterface playlist;
-
-	private UriDropAdapter dropAdapter;
 
 	private Composite container;
 	private Composite engineComposite;
@@ -144,46 +69,69 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 	private int currentSongIndex;
 	private EngineStateEnum currentState;
 	private Slider volumeSlider;
+	private boolean uiInitialized;
 	
 	private SeekWidget seekWidget;
 	private CollectionWidget collectionWidget;
+	private PlaylistWidget playlistWidget;
 	
 	@org.osgi.service.component.annotations.Reference(cardinality=ReferenceCardinality.OPTIONAL, policy=ReferencePolicy.DYNAMIC)
 	public void setEngine(EngineInterface pEngine) {
 		engine=pEngine;
+		if (uiInitialized) {
+			getShell().getDisplay().asyncExec(()->{
+				if (playlistWidget!=null)
+					playlistWidget.setEngine(pEngine);
+			});
+		}
 		currentState=EngineStateEnum.LOADED;
 	}
 	
 	public void unsetEngine(EngineInterface pEngine) {
 		engine=null;
+		if (uiInitialized) {
+			getShell().getDisplay().asyncExec(()->{
+				if (playlistWidget!=null)
+					playlistWidget.setEngine(null);
+			});
+		}
 		currentState=EngineStateEnum.UNLOADED;
 	}
 	
 	@org.osgi.service.component.annotations.Reference(cardinality=ReferenceCardinality.MULTIPLE, policy=ReferencePolicy.DYNAMIC)
 	public void addCollection(CollectionInterface collection) {
-		collections.add(collection);
-		getShell().getDisplay().asyncExec(()->{
-			collectionWidget.addCollection(collection);
-		});
+		if (!collections.contains(collection))
+			collections.add(collection);
+		if (uiInitialized) {
+			getShell().getDisplay().asyncExec(()->{
+				if (collectionWidget!=null)
+					collectionWidget.addCollection(collection);
+			});
+		}
 	}
 	
 	public void removeCollection(CollectionInterface collection) {
 		collections.remove(collection);
-		getShell().getDisplay().asyncExec(()->{
-			collectionWidget.removeCollection(collection);
-		});
+		if (uiInitialized) {
+			getShell().getDisplay().asyncExec(()->{
+				if (collectionWidget!=null)
+					collectionWidget.removeCollection(collection);
+			});
+		}
 	}
 	
 	@org.osgi.service.component.annotations.Reference(cardinality=ReferenceCardinality.OPTIONAL, policy=ReferencePolicy.DYNAMIC)
 	public void setPlaylist(PlaylistInterface pPlaylist) {
-		playlist=pPlaylist;
-		if (playlist!=null) {
-			playlist.load("file:///home/christoph/.bragi/Playlist/current.m3u");
+		if (playlist!=pPlaylist) {
+			playlist=pPlaylist;
+			if (playlist!=null) {
+				playlist.load("file:///home/christoph/.bragi/Playlist/current.m3u");
+			}
 		}
-		if (playlistTableViewer!=null) {
+		if (uiInitialized) {
 			getShell().getDisplay().asyncExec(()->{
-		      	playlistTableViewer.setInput(playlist);
-				playlistTableViewer.refresh();
+				if (playlistWidget!=null)
+					playlistWidget.setPlaylist(pPlaylist);
 			});
 		}
 	}
@@ -194,41 +142,13 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 		setPlaylist(pPlaylist);
 	}
 	
-	public static String extractValueFromLine(String header, String line) {
-		Pattern pattern=Pattern.compile(header+"='([^;;]*)'");
-		Matcher matcher=pattern.matcher(line);
-		if (matcher.find()) 
-			return matcher.group(1);
-		else
-			return "";
-	}
-	
 
-	private String getPlaylistTableViewerDragSourceEventData() {
-		String retValue="";
-		if (playlist!=null) {
-			List<PlaylistEntry> playlistEntries = playlist.filter("*", MetaDataEnum.values());
-			final AtomicInteger i=new AtomicInteger(-1);
-			List<String> lines=playlistEntries.stream().map(entry->(i.incrementAndGet())+";;URI='"+entry.getUri().toString()+"'"+entry.getMetaData().entrySet().stream().map(metaData->";;"+metaData.getKey().name()+"='"+metaData.getValue()+"'").collect(Collectors.joining())).collect(Collectors.toList());
-			IStructuredSelection selection = (IStructuredSelection) playlistTableViewer.getSelection();
-			Iterator selectionIterator=selection.iterator();
-			i.set(-1);
-			while (selectionIterator.hasNext()) {
-				Object selectedObject=selectionIterator.next();
-				int index=lines.indexOf(selectedObject);
-				playlist.removeMedia(index-i.incrementAndGet());
-				retValue+=selectedObject.toString()+"\n";
-			}
-		}
-		playlistTableViewer.refresh();
-		return retValue;
-	}
-	
 	/**
 	 * Create the application window,
 	 */
 	public MainWindow() {
 		super(null);
+		uiInitialized = false;
 		currentSongIndex = 0;
 		collections=new ArrayList<>();
 		createActions();
@@ -266,15 +186,9 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 		container = new Composite(parent, SWT.NONE);
 		container.setLayout(new BorderLayout(0, 0));
 		{
-			playlistTableViewer = new TableViewer(container, SWT.BORDER | SWT.FULL_SELECTION | SWT.MULTI);
-			dropAdapter = new UriDropAdapter(playlistTableViewer);
-			int operations = DND.DROP_COPY;
-		    Transfer[] transferTypes = new Transfer[]{TextTransfer.getInstance()};
-		    playlistTableViewer.addDragSupport(operations, transferTypes, new UriDragListener(this::getPlaylistTableViewerDragSourceEventData));
-		    playlistTableViewer.addDropSupport(operations, transferTypes, dropAdapter);
-			playlistTable = playlistTableViewer.getTable();
-			playlistTable.setLayoutData(BorderLayout.EAST);
-			playlistTable.setHeaderVisible(true);
+			playlistWidget = new PlaylistWidget(container, SWT.NONE);
+			playlistWidget.setLayoutData(BorderLayout.EAST);
+			playlistWidget.setEngine(engine);
 			{
 				collectionWidget = new CollectionWidget(container, SWT.NONE);
 				collectionWidget.setLayoutData(BorderLayout.WEST);
@@ -369,47 +283,15 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 					}
 				}
 			}
-			{
-				for (MetaDataEnum metaData : EnumSet.of(MetaDataEnum.TITLE, MetaDataEnum.ARTIST, MetaDataEnum.ALBUM)) {
-					TableViewerColumn tableViewerColumn = new TableViewerColumn(playlistTableViewer, SWT.NONE);
-					TableColumn tblclmnExamplecolumn = tableViewerColumn.getColumn();
-					tblclmnExamplecolumn.setWidth(100);
-					tblclmnExamplecolumn.setText(metaData.name());
-				}
-				
-			}
-			playlistTableViewer.setLabelProvider(new TableLabelProvider());
-			playlistTableViewer.setContentProvider(new TableContentProvider());
-			playlistTableViewer.setInput(playlist);
-			playlistTableViewer.addDoubleClickListener(new IDoubleClickListener() {
-
-				@Override
-				public void doubleClick(DoubleClickEvent event) {
-					currentSongIndex=playlistTable.getSelectionIndex();
-					engine.play(currentSongIndex);
-				}
-				
-			});
-			playlistTable.addKeyListener(new KeyAdapter() {
-
-				@Override
-				public void keyReleased(KeyEvent e) {
-					if (e.keyCode==SWT.DEL)
-					{
-						if (playlist!=null) {
-							final AtomicInteger i=new AtomicInteger(-1);
-							Arrays.stream(playlistTable.getSelectionIndices()).map(index->index-i.incrementAndGet()).forEach(playlist::removeMedia);
-							playlistTableViewer.refresh();
-						}
-					}
-					super.keyReleased(e);
-				}
-				
-			});
 			seekWidget = new SeekWidget(container, SWT.NONE);
 			seekWidget.setLayoutData(BorderLayout.NORTH);
 			seekWidget.layout();
 		}
+		// make sure the sub-widgets are correctly initialized
+		uiInitialized=true;
+		collections.forEach(this::addCollection);
+		setPlaylist(playlist);
+		setEngine(engine);
 		return container;
 	}
 
@@ -482,7 +364,7 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 				stopButton.setEnabled(isPlayingOrPaused);
 				nextButton.setEnabled(isPlayingOrPaused);
 				previousButton.setEnabled(isPlayingOrPaused && (currentSongIndex>0)); 
-				playlistTableViewer.refresh();
+				playlistWidget.refresh();
 				switch(currentState) {
 				case INVALID:
 					break;
@@ -517,7 +399,7 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 			return;
 		if (newState == EngineStateEnum.PLAYING) {
 			if (engineEvent.equals(EngineInterface.BACKWARD_EVENT) || engineEvent.equals(EngineInterface.FORWARD_EVENT) || engineEvent.equals(EngineInterface.JUMP_EVENT))
-				currentSongIndex = (int) eventData[0];
+				playlistWidget.setCurrentSongIndex((int) eventData[0]);
 			else if (engineEvent.equals(EngineInterface.DURATION_CHANGED_EVENT)) {
 				try {
 					int songDuration = (int) eventData[0];
@@ -534,15 +416,9 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 			seekWidget.pause();
 		else if (newState == EngineStateEnum.LOADED)
 			seekWidget.terminate();
+		playlistWidget.setCurrentState(newState);
 		this.currentState=newState;
 		updateUi();
 		
 	}
-
-  	private static String[] playlist2StringArray(PlaylistInterface playlist) {
-  		List<PlaylistEntry> playlistEntries = playlist.filter("*", MetaDataEnum.values());
-  		final AtomicInteger i=new AtomicInteger(-1);
-  		String[] lines=playlistEntries.stream().map(entry->(i.incrementAndGet())+";;URI='"+entry.getUri().toString()+"'"+entry.getMetaData().entrySet().stream().map(metaData->";;"+metaData.getKey().name()+"='"+metaData.getValue()+"'").collect(Collectors.joining())).toArray(String[]::new);
-  		return lines;
-  	}
 }
