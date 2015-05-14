@@ -13,21 +13,15 @@ package org.bragi.LuceneIndexer;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
-import java.util.Hashtable;
 import java.util.Map;
 
-import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.store.SimpleFSDirectory;
 import org.bragi.LuceneIndexer.internal.LuceneIndexer;
 import org.bragi.indexer.IndexerInterface;
-import org.bragi.metadata.MetaDataEnum;
 import org.bragi.metadata.MetaDataProviderInterface;
-import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.ConfigurationPolicy;
 import org.osgi.service.component.annotations.Modified;
-import org.osgi.service.component.annotations.Reference;
 
 
 /**
@@ -39,24 +33,13 @@ import org.osgi.service.component.annotations.Reference;
  *
  */
 @Component(name="org.bragi.LuceneIndexer.SimpleFSBasedLuceneIndexer", configurationPolicy=ConfigurationPolicy.REQUIRE, property="service.ranking=2")
-public class SimpleFSBasedLuceneIndexer implements IndexerInterface {
-	
-	private LuceneIndexer indexer;
-	private MetaDataProviderInterface metaDataProvider;
+public class SimpleFSBasedLuceneIndexer extends AbstractLuceneIndexer implements IndexerInterface {
 	
 	/**
 	 * Constructor
 	 */
 	public SimpleFSBasedLuceneIndexer() {
-	}
-	
-	/**
-	 * Activates a new instance of this class. Activation is done via 
-	 * @param props
-	 */
-	@Activate
-	public void activate(Map<String,Object> props) {
-		modified(props);
+		super();
 	}
 	
 	@Modified
@@ -70,55 +53,16 @@ public class SimpleFSBasedLuceneIndexer implements IndexerInterface {
 		}
 	}
 	
-		
-	@Override
-	@Reference
+	@org.osgi.service.component.annotations.Reference
 	public void setMetaDataProvider(MetaDataProviderInterface pMetaDataProvider) {
 		if (indexer!=null)
 			indexer.setMetaDataProvider(pMetaDataProvider);
 		metaDataProvider=pMetaDataProvider;
+		
 	}
-	@Override
+
 	public void unsetMetaDataProvider(MetaDataProviderInterface pMetaDataProvider) {
-		if (indexer!=null)
-			indexer.setMetaDataProvider(null);
-		metaDataProvider=null;
+		setMetaDataProvider(null);
 	}
-	
-	/* (non-Javadoc)
-	 * @see org.bragi.playlist.LucenePlaylist.internal.IndexerInterface#indexUri(java.lang.String)
-	 */
-	@Override
-	public boolean indexUri(String uri) {
-		return (indexer==null)?false:indexer.indexUri(uri);
-	}
-	
-	/* (non-Javadoc)
-	 * @see org.bragi.playlist.LucenePlaylist.internal.IndexerInterface#removeUri(java.lang.String)
-	 */
-	@Override
-	public void removeUri(String uri) throws ParseException, IOException {
-		if (indexer!=null)
-			indexer.removeUri(uri);
-	}
-	
-	/* (non-Javadoc)
-	 * @see org.bragi.playlist.LucenePlaylist.internal.IndexerInterface#closeIndexWriter()
-	 */
-	@Override
-	public void closeIndexWriter() throws IOException {
-		if (indexer!=null)
-			indexer.closeIndexWriter();
-	}
-	
-	@Override
-	public Map<URI, Map<MetaDataEnum, String>> filter(String query,
-			MetaDataEnum... metaData) throws Exception {
-		Map<URI, Map<MetaDataEnum, String>> retValue=new Hashtable<>();
-		if (indexer!=null)
-			retValue=indexer.filter(query, metaData);
-		return retValue;
-	}
-	
 	
 }
