@@ -16,14 +16,13 @@ import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.bragi.engine.EngineInterface;
 import org.bragi.metadata.MetaDataEnum;
 import org.bragi.player.dnd.UriDragListener;
 import org.bragi.player.dnd.UriDropAdapter;
+import org.bragi.player.helpers.QueryHelpers;
 import org.bragi.player.statemachines.EngineStateEnum;
 import org.bragi.playlist.PlaylistEntry;
 import org.bragi.playlist.PlaylistInterface;
@@ -63,15 +62,6 @@ public class PlaylistWidget extends Composite {
 	
 	private class PlaylistTableLabelProvider extends ColumnLabelProvider implements ITableLabelProvider {
 		
-		public String extractValueFromLine(String header, String line) {
-			Pattern pattern=Pattern.compile(header+"='([^;;]*)'");
-			Matcher matcher=pattern.matcher(line);
-			if (matcher.find()) 
-				return matcher.group(1);
-			else
-				return "";
-		}
-
 		@Override
 		public Image getColumnImage(Object arg0, int arg1) {
 			return null;
@@ -81,7 +71,7 @@ public class PlaylistWidget extends Composite {
 		public String getColumnText(Object data, int column) {
 			String newRow=data.toString();
 			String header=playlistTableViewer.getTable().getColumn(column).getText();
-			return extractValueFromLine(header, newRow);
+			return QueryHelpers.extractValueFromLine(header, newRow);
 		}
 
 		@Override
@@ -208,16 +198,16 @@ public class PlaylistWidget extends Composite {
 	private String getPlaylistTableViewerDragSourceEventData() {
 		String retValue="";
 		if (playlist!=null) {
-			List<PlaylistEntry> playlistEntries = playlist.filter("*", MetaDataEnum.values());
+			//List<PlaylistEntry> playlistEntries = playlist.filter("*", MetaDataEnum.values());
 			final AtomicInteger i=new AtomicInteger(-1);
-			List<String> lines=playlistEntries.stream().map(entry->(i.incrementAndGet())+";;URI='"+entry.getUri().toString()+"'"+entry.getMetaData().entrySet().stream().map(metaData->";;"+metaData.getKey().name()+"='"+metaData.getValue()+"'").collect(Collectors.joining())).collect(Collectors.toList());
+			//List<String> lines=playlistEntries.stream().map(entry->(i.incrementAndGet())+";;URI='"+entry.getUri().toString()+"'"+entry.getMetaData().entrySet().stream().map(metaData->";;"+metaData.getKey().name()+"='"+metaData.getValue()+"'").collect(Collectors.joining())).collect(Collectors.toList());
 			IStructuredSelection selection = (IStructuredSelection) playlistTableViewer.getSelection();
 			Iterator selectionIterator=selection.iterator();
-			i.set(-1);
+			//i.set(-1);
 			while (selectionIterator.hasNext()) {
 				Object selectedObject=selectionIterator.next();
-				int index=lines.indexOf(selectedObject);
-				playlist.removeMedia(index-i.incrementAndGet());
+				//int index=lines.indexOf(selectedObject);
+				//playlist.removeMedia(index-i.incrementAndGet());
 				retValue+=selectedObject.toString()+"\n";
 			}
 		}

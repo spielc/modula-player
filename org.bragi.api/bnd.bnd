@@ -15,7 +15,9 @@ Bundle-Description: 				\
 Require-Capability: \
 	compile-only
 
--buildpath: osgi.enroute.base.api;version=1.0
+-buildpath: \
+	osgi.enroute.base.api;version=1.0,\
+	biz.aQute.junit
 Bundle-License: LGPLv3
 Export-Package:  \
 	org.bragi.collection,\

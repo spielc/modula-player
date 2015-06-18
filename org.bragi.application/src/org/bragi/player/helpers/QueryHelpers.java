@@ -4,6 +4,8 @@
 package org.bragi.player.helpers;
 
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.bragi.collection.CollectionEntry;
@@ -13,6 +15,15 @@ import org.bragi.collection.CollectionEntry;
  *
  */
 public final class QueryHelpers {
+	
+	public static String extractValueFromLine(String header, String line) {
+		Pattern pattern=Pattern.compile(header+"='([^;;]*)'");
+		Matcher matcher=pattern.matcher(line);
+		if (matcher.find()) 
+			return matcher.group(1);
+		else
+			return "";
+	}
 	
 	/**
 	 * 

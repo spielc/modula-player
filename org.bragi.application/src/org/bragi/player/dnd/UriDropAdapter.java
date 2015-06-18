@@ -14,6 +14,7 @@ package org.bragi.player.dnd;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -52,31 +53,44 @@ public class UriDropAdapter extends ViewerDropAdapter {
 			Object currentTarget = getCurrentTarget();
 			final AtomicInteger i=new AtomicInteger(-1);
 			List<String> lines=playlistEntries.stream().map(entry->(i.incrementAndGet())+";;URI='"+entry.getUri().toString()+"'"+entry.getMetaData().entrySet().stream().map(metaData->";;"+metaData.getKey().name()+"='"+metaData.getValue()+"'").collect(Collectors.joining())).collect(Collectors.toList());
-			int index=lines.indexOf(currentTarget);
-			index = (index!=-1) ? index : lines.size();
-			switch(location) {
-			case LOCATION_AFTER:
-			case LOCATION_ON:
-				index++;
-				break;
-			}
-			final int finalIndex=(index<0) ? 0 : index;
-			Pattern pattern = Pattern.compile(".*URI='([^;]*)'");
-			Stream<String> droppedDataLine=Arrays.asList(droppedData.split("\n")).stream();
-			droppedDataLine.map(line->pattern.matcher(line))
-						   .filter(matcher->matcher.find())
-						   .map(matcher->matcher.group(1)).forEach(uri->{
-								if (currentTarget==null) {
-									try {
-										playlist.addMedia(uri);
-									} catch (Exception e) {
-										// TODO Auto-generated catch block
-										e.printStackTrace();
-									}
-								}
-								else
-									playlist.insertMedia(finalIndex, uri);
-						   });
+			int currentIndex=lines.indexOf(currentTarget);
+			currentIndex = (currentIndex!=-1) ? currentIndex : lines.size();
+//			switch(location) {
+//			case LOCATION_AFTER:
+//			case LOCATION_ON:
+//				currentIndex++;
+//				break;
+//			}
+			final int realCurrentIndex=currentIndex;
+			final AtomicInteger indexAdjustment=new AtomicInteger(0);
+			final AtomicInteger insertionCounter=new AtomicInteger(0);
+			Arrays.asList(droppedData.split("\n")).stream().filter(line->lines.indexOf(line)!=-1).forEach(line->{
+				int droppedIndex=lines.indexOf(line);
+				if (droppedIndex<realCurrentIndex)
+					indexAdjustment.decrementAndGet();
+				playlist.removeMedia(droppedIndex);
+				Pattern pattern = Pattern.compile(".*URI='([^;]*)'");
+				Matcher matcher=pattern.matcher(line);
+				if (matcher.find())
+					playlist.insertMedia(realCurrentIndex+indexAdjustment.get()+insertionCounter.incrementAndGet(), matcher.group(1));
+			});
+//			final int finalIndex=(index<0) ? 0 : index;
+//			Pattern pattern = Pattern.compile(".*URI='([^;]*)'");
+//			Stream<String> droppedDataLine=Arrays.asList(droppedData.split("\n")).stream();
+//			droppedDataLine.map(line->pattern.matcher(line))
+//						   .filter(matcher->matcher.find())
+//						   .map(matcher->matcher.group(1)).forEach(uri->{
+//								if (currentTarget==null) {
+//									try {
+//										playlist.addMedia(uri);
+//									} catch (Exception e) {
+//										// TODO Auto-generated catch block
+//										e.printStackTrace();
+//									}
+//								}
+//								else
+//									playlist.insertMedia(finalIndex, uri);
+//						   });
 		}
 		viewer.refresh();
 		return true;
