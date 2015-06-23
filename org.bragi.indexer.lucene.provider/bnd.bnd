@@ -31,5 +31,6 @@ Private-Package: \
 	
 -runbundles: \
 	${error;Resolve first}
-Export-Package:  \
-	org.bragi.indexer
+Export-Package: \
+	org.bragi.indexer,\
+	org.bragi.query

@@ -1,7 +1,7 @@
 /**
  * 
  */
-package org.bragi.indexer;
+package org.bragi.query;
 
 /**
  * @author christoph

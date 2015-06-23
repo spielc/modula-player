@@ -1,7 +1,18 @@
 /**
  * 
  */
-package org.bragi.indexer;
+package org.bragi.query.impl;
+/**
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option) any
+ * later version. This program is distributed in the hope that it will be
+ * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
+ * Public License for more details. You should have received a copy of the GNU
+ * Lesser General Public License along with this program. If not, see
+ * <http://www.gnu.org/licenses/>
+ */
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -13,19 +24,23 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import org.bragi.metadata.MetaDataEnum;
+import org.bragi.query.ParseException;
+import org.bragi.query.QueryParserInterface;
+import org.bragi.query.Token;
+import org.bragi.query.TokenType;
+import org.osgi.service.component.annotations.Component;
 
 /**
  * @author christoph
  *
  */
-class QueryParser {
+@Component
+public class QueryParser implements QueryParserInterface {
 	
-	private AbstractIndexer indexer;
 	private List<MetaDataEnum> queriedMetaData;
 	private Predicate<Entry<MetaDataEnum,String>> filter;
 	
-	protected QueryParser(AbstractIndexer pIndexer) {
-		indexer=pIndexer;
+	protected QueryParser() {
 		queriedMetaData=new ArrayList<>();
 		filter=null;
 	}
@@ -148,13 +163,12 @@ class QueryParser {
 		}
 	}
 	
-	protected Map<URI,Map<MetaDataEnum,String>> execute(String query) throws ParseException {
+	public Map<URI,Map<MetaDataEnum,String>> execute(String query, Map<URI,Map<MetaDataEnum,String>> metaData) throws ParseException {
 		parse(query);
-		Map<URI,Map<MetaDataEnum,String>> metaData=indexer.fetch();
-		if (filter!=null) {
-			metaData.replaceAll((key, value)->value.entrySet().stream().filter(entry->queriedMetaData.contains(entry.getKey())).collect(Collectors.toMap(entry->entry.getKey(), entry->entry.getValue())));
+//		Map<URI,Map<MetaDataEnum,String>> metaData=indexer.fetch();
+		metaData.replaceAll((key, value)->value.entrySet().stream().filter(entry->queriedMetaData.contains(entry.getKey())).collect(Collectors.toMap(entry->entry.getKey(), entry->entry.getValue())));
+		if (filter!=null) 
 			metaData=metaData.entrySet().stream().filter(entry->entry.getValue().entrySet().stream().anyMatch(filter)).collect(Collectors.toMap(entry->entry.getKey(), entry->entry.getValue()));
-		}
 		return metaData;
 	}
 	

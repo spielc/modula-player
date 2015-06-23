@@ -1,8 +1,12 @@
 /**
  * 
  */
-package org.bragi.indexer;
+package org.bragi.query.impl;
 
+import org.bragi.query.QueryKeywords;
+import org.bragi.query.Token;
+import org.bragi.query.TokenType;
+import org.bragi.query.impl.QueryScanner;
 import org.junit.Assert;
 import org.junit.Test;
 

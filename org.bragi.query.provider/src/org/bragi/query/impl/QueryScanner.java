@@ -1,7 +1,7 @@
 /**
  * 
  */
-package org.bragi.indexer;
+package org.bragi.query.impl;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -12,6 +12,9 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.bragi.metadata.MetaDataEnum;
+import org.bragi.query.QueryKeywords;
+import org.bragi.query.Token;
+import org.bragi.query.TokenType;
 
 /**
  * @author christoph
@@ -46,7 +49,7 @@ class QueryScanner {
 		STRING_TOKENTYPE_MAP.putAll(metaData.stream().map(MetaDataEnum::name).collect(Collectors.toMap(m->m, m->TokenType.COLUMN_NAME)));
 	}
 
-	public QueryScanner(String pQuery) {
+	QueryScanner(String pQuery) {
 		query = pQuery.trim();
 		currentPosition=0;
 		nextCh();
@@ -107,7 +110,10 @@ class QueryScanner {
 		token.setType(TokenType.NUMBER);
 	}
 	
-	public Token scan() {
+	/* (non-Javadoc)
+	 * @see org.bragi.indexer.QueryInterface#scan()
+	 */
+	Token scan() {
 		// TODO current limitations: string-values mustn't contain a ' ', '\n', '\r'
 		while (ch <= ' ') nextCh(); // skip blanks, tabs, eols
 		Token token = new Token();

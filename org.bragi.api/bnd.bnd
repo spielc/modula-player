@@ -19,9 +19,10 @@ Require-Capability: \
 	osgi.enroute.base.api;version=1.0,\
 	biz.aQute.junit
 Bundle-License: LGPLv3
-Export-Package:  \
+Export-Package: \
 	org.bragi.collection,\
 	org.bragi.engine,\
 	org.bragi.indexer,\
 	org.bragi.metadata,\
-	org.bragi.playlist
+	org.bragi.playlist,\
+	org.bragi.query

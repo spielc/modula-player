@@ -1,7 +1,7 @@
 /**
  * 
  */
-package org.bragi.indexer;
+package org.bragi.query;
 
 /**
  * @author christoph
@@ -17,7 +17,7 @@ public class ParseException extends Exception {
 	private TokenType actualTokenType;
 	private TokenType[] expectedTokenTypes;
 	
-	protected ParseException(TokenType pActualTokenType, TokenType... pExpectedTokenTypes) {
+	public ParseException(TokenType pActualTokenType, TokenType... pExpectedTokenTypes) {
 		actualTokenType = pActualTokenType;
 		expectedTokenTypes = pExpectedTokenTypes;
 	}
@@ -28,6 +28,17 @@ public class ParseException extends Exception {
 
 	public TokenType[] getExpectedTokenType() {
 		return expectedTokenTypes;
+	}
+
+	@Override
+	public String getMessage() {
+		StringBuffer message=new StringBuffer();
+		message.append("Expected tokentypes=");
+		for (TokenType tokenType : expectedTokenTypes) {
+			message.append(tokenType+" ");
+		}
+		message.append("\nActual tokentype="+actualTokenType);
+		return message.toString();
 	}
 
 	
