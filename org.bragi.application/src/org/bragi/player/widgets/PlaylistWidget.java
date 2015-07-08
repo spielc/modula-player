@@ -191,12 +191,6 @@ public class PlaylistWidget extends Composite {
 
 	private static String[] playlist2StringArray(PlaylistInterface playlist) {
 		List<PlaylistEntry> playlistEntries = playlist.filter("*", MetaDataEnum.values());
-		try {
-			List<PlaylistEntry> playlistEntries2 = playlist.filter("SELECT *");
-		} catch (ParseException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
 		final AtomicInteger i=new AtomicInteger(-1);
 		String[] lines=playlistEntries.stream().map(entry->(i.incrementAndGet())+";;URI='"+entry.getUri().toString()+"'"+entry.getMetaData().entrySet().stream().map(metaData->";;"+metaData.getKey().name()+"='"+metaData.getValue()+"'").collect(Collectors.joining())).toArray(String[]::new);
 		return lines;
