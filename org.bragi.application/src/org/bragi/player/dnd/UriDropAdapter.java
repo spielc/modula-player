@@ -11,8 +11,10 @@
  */
 package org.bragi.player.dnd;
 
+import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -41,6 +43,18 @@ public class UriDropAdapter extends ViewerDropAdapter {
 		super(pViewer);
 		viewer=pViewer;
 	}
+	
+	private PlaylistEntry playlistEntryFromString(String playlistEntryString) {
+		Optional<String> uriString=Arrays.asList(playlistEntryString.split(";;")).stream().filter(part->part.contains("URI")).findFirst();
+		if (uriString.isPresent()) {
+			PlaylistEntry entry=new PlaylistEntry();
+			String realURIString=uriString.get().replace("URI='", "");
+			realURIString=realURIString.substring(0, realURIString.length()-1);
+			entry.setUri(URI.create(realURIString));
+			return entry;
+		}
+		return null;
+	}
 
 	@Override
 	public boolean performDrop(Object data) {
@@ -51,29 +65,66 @@ public class UriDropAdapter extends ViewerDropAdapter {
 			List<PlaylistEntry> playlistEntries = playlist.filter("*", MetaDataEnum.values());
 			int location = getCurrentLocation();
 			Object currentTarget = getCurrentTarget();
-			final AtomicInteger i=new AtomicInteger(-1);
-			List<String> lines=playlistEntries.stream().map(entry->(i.incrementAndGet())+";;URI='"+entry.getUri().toString()+"'"+entry.getMetaData().entrySet().stream().map(metaData->";;"+metaData.getKey().name()+"='"+metaData.getValue()+"'").collect(Collectors.joining())).collect(Collectors.toList());
-			int currentIndex=lines.indexOf(currentTarget);
-			currentIndex = (currentIndex!=-1) ? currentIndex : lines.size();
-//			switch(location) {
-//			case LOCATION_AFTER:
-//			case LOCATION_ON:
-//				currentIndex++;
-//				break;
-//			}
-			final int realCurrentIndex=currentIndex;
+			int targetIndex=playlistEntries.size();
+			if (currentTarget!=null) {
+				targetIndex=Integer.parseInt(currentTarget.toString().split(";;")[0]);
+				switch (location) {
+				case LOCATION_AFTER:
+					targetIndex++;
+					break;
+				default:
+					break;
+				}
+			}
+			
+			final AtomicInteger deleteIndexAdjustment=new AtomicInteger(0);
 			final AtomicInteger indexAdjustment=new AtomicInteger(0);
-			final AtomicInteger insertionCounter=new AtomicInteger(0);
-			Arrays.asList(droppedData.split("\n")).stream().filter(line->lines.indexOf(line)!=-1).forEach(line->{
-				int droppedIndex=lines.indexOf(line);
-				if (droppedIndex<realCurrentIndex)
-					indexAdjustment.decrementAndGet();
-				playlist.removeMedia(droppedIndex);
-				Pattern pattern = Pattern.compile(".*URI='([^;]*)'");
+			final int realTargetIndex=targetIndex;
+			Arrays.asList(droppedData.split("\n")).stream().forEach(line->{
+				int playlistSize=playlistEntries.size();
+				Pattern pattern = Pattern.compile("^(\\d+);;");
 				Matcher matcher=pattern.matcher(line);
+				if (matcher.find()) {
+					int deleteIndex=Integer.parseInt(matcher.group(1));
+					System.out.println("deleteIndex<realTargetIndex"+(deleteIndex<realTargetIndex));
+					if (deleteIndex<realTargetIndex) {
+						indexAdjustment.decrementAndGet();
+						deleteIndex-=deleteIndexAdjustment.getAndIncrement();
+					}
+					playlist.removeMedia(deleteIndex);
+					playlistSize--;
+				}
+				pattern = Pattern.compile(".*URI='([^;]*)'");
+				matcher=pattern.matcher(line);
 				if (matcher.find())
-					playlist.insertMedia(realCurrentIndex+indexAdjustment.get()+insertionCounter.incrementAndGet(), matcher.group(1));
+					playlist.insertMedia(realTargetIndex+indexAdjustment.getAndIncrement(), matcher.group(1));
 			});
+//			PlaylistEntry currentTargetEntry=playlistEntryFromString(currentTarget.toString());
+//			int currentIndex=Integer.parseInt(currentTarget.toString().split(";;")[0]);
+//			int bla=playlistEntries.indexOf(currentTargetEntry);
+//			final AtomicInteger i=new AtomicInteger(-1);
+//			List<String> lines=playlistEntries.stream().map(entry->(i.incrementAndGet())+";;URI='"+entry.getUri().toString()+"'"+entry.getMetaData().entrySet().stream().map(metaData->";;"+metaData.getKey().name()+"='"+metaData.getValue()+"'").collect(Collectors.joining())).collect(Collectors.toList());
+//			//int currentIndex=lines.indexOf(currentTarget);
+//			currentIndex = (currentIndex!=-1) ? currentIndex : lines.size();
+////			switch(location) {
+////			case LOCATION_AFTER:
+////			case LOCATION_ON:
+////				currentIndex++;
+////				break;
+////			}
+//			final int realCurrentIndex=currentIndex;
+//			final AtomicInteger indexAdjustment=new AtomicInteger(0);
+//			final AtomicInteger insertionCounter=new AtomicInteger(0);
+//			Arrays.asList(droppedData.split("\n")).stream().filter(line->lines.indexOf(line)!=-1).forEach(line->{
+//				int droppedIndex=lines.indexOf(line);
+//				if (droppedIndex<realCurrentIndex)
+//					indexAdjustment.decrementAndGet();
+//				playlist.removeMedia(droppedIndex);
+//				Pattern pattern = Pattern.compile(".*URI='([^;]*)'");
+//				Matcher matcher=pattern.matcher(line);
+//				if (matcher.find())
+//					playlist.insertMedia(realCurrentIndex+indexAdjustment.get()+insertionCounter.incrementAndGet(), matcher.group(1));
+//			});
 //			final int finalIndex=(index<0) ? 0 : index;
 //			Pattern pattern = Pattern.compile(".*URI='([^;]*)'");
 //			Stream<String> droppedDataLine=Arrays.asList(droppedData.split("\n")).stream();
