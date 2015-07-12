@@ -15,22 +15,19 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 import org.bragi.collection.CollectionInterface;
 import org.bragi.engine.EngineInterface;
-import org.bragi.player.dnd.UriDragListener;
-import org.bragi.player.widgets.PlaylistWidget;
 import org.bragi.player.statemachines.EngineStateChangeListener;
 import org.bragi.player.statemachines.EngineStateEnum;
 import org.bragi.player.widgets.CollectionWidget;
+import org.bragi.player.widgets.PlaylistWidget;
 import org.bragi.player.widgets.SeekWidget;
 import org.bragi.playlist.PlaylistInterface;
 import org.eclipse.jface.action.CoolBarManager;
 import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.StatusLineManager;
-import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.window.ApplicationWindow;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.MouseAdapter;
@@ -45,12 +42,13 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Slider;
+import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 
 import swing2swt.layout.BorderLayout;
 
-@org.osgi.service.component.annotations.Component(immediate=true) 
+@Component(immediate=true) 
 public class MainWindow extends ApplicationWindow implements EngineStateChangeListener { 
  
 	
@@ -398,8 +396,11 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 		if (seekWidget==null)
 			return;
 		if (newState == EngineStateEnum.PLAYING) {
-			if (engineEvent.equals(EngineInterface.BACKWARD_EVENT) || engineEvent.equals(EngineInterface.FORWARD_EVENT) || engineEvent.equals(EngineInterface.JUMP_EVENT))
-				playlistWidget.setCurrentSongIndex((int) eventData[0]);
+			if (engineEvent.equals(EngineInterface.BACKWARD_EVENT) || engineEvent.equals(EngineInterface.FORWARD_EVENT) || engineEvent.equals(EngineInterface.JUMP_EVENT)) {
+				int songIndex=(int) eventData[0];
+				playlistWidget.setCurrentSongIndex(songIndex);
+				currentSongIndex=songIndex;
+			}
 			else if (engineEvent.equals(EngineInterface.DURATION_CHANGED_EVENT)) {
 				try {
 					int songDuration = (int) eventData[0];

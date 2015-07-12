@@ -13,9 +13,7 @@ package org.bragi.engine.vlc;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.bragi.engine.EngineInterface;
 import org.bragi.engine.vlc.internal.URIParser;
@@ -67,8 +65,9 @@ public class VLCEngine implements EngineInterface, EventHandler {
 		if (player!=null) {
 			if (itemIndex!=currentIndex)
 				player.playItem(itemIndex);
-			player.play();
-			postNavigateEvents(currentIndex, itemIndex);
+			else
+				player.play();
+//			postNavigateEvents(currentIndex, itemIndex);
 			currentIndex=itemIndex;
 			//playerComponent.postEvent(new Event(EngineInterface.PLAY_EVENT,(Map<String,Object>)null));
 		}
@@ -102,7 +101,7 @@ public class VLCEngine implements EngineInterface, EventHandler {
 		if (player!=null) {
 			//currentIndex++;
 			player.playNext();
-			postNavigateEvents(currentIndex, ++currentIndex);
+//			postNavigateEvents(currentIndex, ++currentIndex);
 			//playerComponent.postEvent(new Event(EngineInterface.FORWARD_EVENT,(Map<String,Object>)null));
 		}
 	}
@@ -112,7 +111,7 @@ public class VLCEngine implements EngineInterface, EventHandler {
 		if (player!=null) {
 			//currentIndex--;
 			player.playPrevious();
-			postNavigateEvents(currentIndex, --currentIndex);
+//			postNavigateEvents(currentIndex, --currentIndex);
 			//playerComponent.postEvent(new Event(EngineInterface.BACKWARD_EVENT,(Map<String,Object>)null));
 		}
 	}
@@ -129,7 +128,6 @@ public class VLCEngine implements EngineInterface, EventHandler {
 				volume=curVolume;
 				setVolume(0);
 			}
-			//LibVlc.INSTANCE.libvlc_audio_toggle_mute(playerComponent.getMediaPlayer().mediaPlayerInstance()); //probably a race-condition; should be fixed as described here: http://www.videolan.org/developers/vlc/doc/doxygen/html/group__libvlc__audio.html#ga438620a3c817b8b4faceb77c476b89fe
 		}
 	}
 
@@ -147,24 +145,6 @@ public class VLCEngine implements EngineInterface, EventHandler {
 		if (player!=null)
 			volume = playerComponent.getMediaPlayer().getVolume();
 		return (volume<LibVlcConst.MAX_VOLUME)?volume:LibVlcConst.MAX_VOLUME;
-	}
-	
-	/**
-	 * 
-	 * @param lastIndex
-	 * @param currentIndex
-	 */
-	private void postNavigateEvents(int lastIndex, int currentIndex) {
-		Map<String,Object> eventProperties=new HashMap<>();
-		eventProperties.put(EngineInterface.CURRENT_INDEX, currentIndex);
-		Event event=null;
-		if (Math.abs(lastIndex-currentIndex)>1)
-			event=new Event(EngineInterface.JUMP_EVENT,eventProperties);
-		else if (lastIndex<currentIndex)
-			event=new Event(EngineInterface.FORWARD_EVENT,eventProperties);
-		else if (lastIndex>currentIndex)
-			event=new Event(EngineInterface.BACKWARD_EVENT,eventProperties);
-		playerComponent.postEvent(event);
 	}
 	
 	@Override

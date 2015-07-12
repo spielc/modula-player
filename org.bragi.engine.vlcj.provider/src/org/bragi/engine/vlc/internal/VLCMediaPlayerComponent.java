@@ -12,7 +12,6 @@
 package org.bragi.engine.vlc.internal;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.bragi.engine.EngineInterface;
@@ -48,6 +47,8 @@ public class VLCMediaPlayerComponent extends AudioMediaListPlayerComponent {
 		postEvent(new Event(EngineInterface.FINISHED_EVENT,(Map<String,Object>)null));
 	}
 
+	
+	
 //	@Override
 //	public void nextItem(MediaListPlayer mediaListPlayer, libvlc_media_t item,	String itemMrl) {
 //		if (lastMrl.isEmpty())
@@ -81,6 +82,30 @@ public class VLCMediaPlayerComponent extends AudioMediaListPlayerComponent {
 //		if (lastIndex!=currentIndex)
 //			lastMrl=itemMrl;
 //	}
+
+	@Override
+	public void nextItem(MediaListPlayer mediaListPlayer, libvlc_media_t item, String itemMrl) {
+		if (lastMrl.isEmpty())
+			lastMrl=itemMrl;
+		MediaList mediaList=mediaListPlayer.getMediaList();
+		int lastIndex=-1;
+		int currentIndex=-1;
+		int counter=0;
+		for (MediaListItem mediaListItem : mediaList.items()) {
+			if (mediaListItem.mrl().equals(lastMrl)) {
+				lastIndex=counter;
+				lastMrl=null;
+			}
+			else if (mediaListItem.mrl().equals(itemMrl))
+				currentIndex=counter;
+			if((lastIndex>=0) && (currentIndex>=0))
+				break;
+			counter++;
+		}
+		postNavigateEvents(lastIndex, currentIndex);
+		if (lastIndex!=currentIndex)
+			lastMrl=itemMrl;
+	}
 
 	@Override
 	public void paused(MediaPlayer mediaPlayer) {
@@ -126,5 +151,23 @@ public class VLCMediaPlayerComponent extends AudioMediaListPlayerComponent {
 	public void postEvent(Event event) {
 		if (eventAdmin!=null)
 			eventAdmin.postEvent(event);
+	}
+	
+	/**
+	 * 
+	 * @param lastIndex
+	 * @param currentIndex
+	 */
+	private void postNavigateEvents(int lastIndex, int currentIndex) {
+		Map<String,Object> eventProperties=new HashMap<>();
+		eventProperties.put(EngineInterface.CURRENT_INDEX, currentIndex);
+		Event event=null;
+		if (Math.abs(lastIndex-currentIndex)>1)
+			event=new Event(EngineInterface.JUMP_EVENT,eventProperties);
+		else if (lastIndex<currentIndex)
+			event=new Event(EngineInterface.FORWARD_EVENT,eventProperties);
+		else if (lastIndex>currentIndex)
+			event=new Event(EngineInterface.BACKWARD_EVENT,eventProperties);
+		postEvent(event);
 	}
 }
