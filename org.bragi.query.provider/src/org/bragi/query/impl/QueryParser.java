@@ -1,8 +1,4 @@
 /**
- * 
- */
-package org.bragi.query.impl;
-/**
  * This program is free software: you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
  * Software Foundation, either version 3 of the License, or (at your option) any
@@ -13,6 +9,8 @@ package org.bragi.query.impl;
  * Lesser General Public License along with this program. If not, see
  * <http://www.gnu.org/licenses/>
  */
+package org.bragi.query.impl;
+
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -40,7 +38,7 @@ public class QueryParser implements QueryParserInterface {
 	private List<MetaDataEnum> queriedMetaData;
 	private Predicate<Entry<MetaDataEnum,String>> filter;
 	
-	protected QueryParser() {
+	public QueryParser() {
 		queriedMetaData=new ArrayList<>();
 		filter=null;
 	}
@@ -145,6 +143,20 @@ public class QueryParser implements QueryParserInterface {
 							throw new ParseException(token.getType(), TokenType.APOSTROPHE);
 					} while(token.getType()!=TokenType.APOSTROPHE);
 					break;
+				case MINUS:
+					value="-";
+					token=scanner.scan();
+					if (token.getType()!=TokenType.NUMBER)
+						throw new ParseException(token.getType(), TokenType.NUMBER);
+					value+=token.getValue();
+					token=scanner.scan();
+					if (token.getType()==TokenType.PERIOD) {
+						token=scanner.scan();
+						if (token.getType()!=TokenType.NUMBER)
+							throw new ParseException(token.getType(), TokenType.NUMBER);
+						value+="."+token.getValue();
+					}
+					break;
 				default:
 					throw new ParseException(token.getType(), TokenType.NUMBER, TokenType.APOSTROPHE);
 				}
@@ -164,6 +176,8 @@ public class QueryParser implements QueryParserInterface {
 	}
 	
 	public Map<URI,Map<MetaDataEnum,String>> execute(String query, Map<URI,Map<MetaDataEnum,String>> metaData) throws ParseException {
+		queriedMetaData.clear();
+		filter=null;
 		parse(query);
 //		Map<URI,Map<MetaDataEnum,String>> metaData=indexer.fetch();
 		metaData.replaceAll((key, value)->value.entrySet().stream().filter(entry->queriedMetaData.contains(entry.getKey())).collect(Collectors.toMap(entry->entry.getKey(), entry->entry.getValue())));
