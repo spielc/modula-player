@@ -21,16 +21,22 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.bragi.indexer.IndexerInterface;
 import org.bragi.metadata.MetaDataEnum;
+import org.bragi.metadata.MetaDataProviderInterface;
 import org.bragi.playlist.PlaylistEntry;
 import org.bragi.playlist.PlaylistInterface;
+import org.bragi.query.QueryParserInterface;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
 
@@ -46,7 +52,7 @@ import christophedelory.playlist.SpecificPlaylistProvider;
  * @author christoph
  *
  */
-@org.osgi.service.component.annotations.Component
+@Component
 public class Playlist implements PlaylistInterface {
 	
 	/**
@@ -120,9 +126,10 @@ public class Playlist implements PlaylistInterface {
 	private boolean isRepeated;
 	private boolean isRandomized;
 	private EventAdmin eventAdmin;
-	private IndexerInterface indexer;
+	private MetaDataProviderInterface metaDataProvider;
+	private QueryParserInterface queryParser;
 	
-	@org.osgi.service.component.annotations.Reference
+	@Reference
 	public void setEventAdmin(EventAdmin pEventAdmin) {
 		eventAdmin=pEventAdmin;
 	}
@@ -130,21 +137,20 @@ public class Playlist implements PlaylistInterface {
 		eventAdmin=null;
 	}
 	
-	@org.osgi.service.component.annotations.Reference(target="(type=PlaylistIndexer)")
-	public void setIndexer(IndexerInterface pIndexer) {
-		indexer=pIndexer;
-		playlist.stream().map(PlaylistEntry::getUri).map(Object::toString).forEach(indexer::indexUri);
-//		for (URI uri : playlist) {
-//			indexer.indexUri(uri.toString());
-//		}
+	@Reference
+	public void setMetaDataProvider(MetaDataProviderInterface pMetaDataProvider) {
+		metaDataProvider=pMetaDataProvider;
 	}
-	public void unsetIndexer(IndexerInterface pIndexer) {
-		try {
-			pIndexer.closeIndexWriter();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		indexer=null;
+	public void unsetIndexer(MetaDataProviderInterface pMetaDataProvider) {
+		metaDataProvider=null;
+	}
+	
+	@Reference
+	public void setQueryParser(QueryParserInterface pQueryParser) {
+		queryParser=pQueryParser;
+	}
+	public void unsetQueryParser(QueryParserInterface pQueryParser) {
+		queryParser=null;
 	}
 	
 	/**
@@ -154,6 +160,7 @@ public class Playlist implements PlaylistInterface {
 		playlist=new ArrayList<>();
 		isRepeated=false;
 		isRandomized=false;
+		metaDataProvider=null;
 	}
 
 	/* (non-Javadoc)
@@ -161,15 +168,27 @@ public class Playlist implements PlaylistInterface {
 	 */
 	@Override
 	public void addMedia(String uri) throws URISyntaxException {
-		if (uri!=null && !uri.isEmpty() && indexer!=null) { //only do something if uri is not null and not empty
+		if (uri!=null && !uri.isEmpty() && metaDataProvider!=null) { //only do something if uri is not null and not empty
 			URI uriObject = new URI(uri);
 			PlaylistEntry entry=new PlaylistEntry();
 			entry.setUri(uriObject);
 			if (playlist.add(entry)) { //only post even if operation was successful
-				indexer.indexUri(uri);
+				entry.setMetaData(createMetaData(uri));
 				postEvent(uriObject,PlaylistInterface.ADD_EVENT);
 			}
 		}
+	}
+	/**
+	 * @param uri
+	 * @return
+	 * @throws URISyntaxException
+	 */
+	private Map<MetaDataEnum, String> createMetaData(String uri) throws URISyntaxException {
+		EnumSet<MetaDataEnum> metaData=EnumSet.allOf(MetaDataEnum.class);
+		String[] metaDataValues=metaDataProvider.getMetaData(uri, metaData);
+		final AtomicInteger index=new AtomicInteger(0);
+		Map<MetaDataEnum,String> metaDataValuesMap=metaData.stream().collect(Collectors.toMap(m->m, m->metaDataValues[index.getAndIncrement()]));
+		return metaDataValuesMap;
 	}
 	
 
@@ -178,13 +197,8 @@ public class Playlist implements PlaylistInterface {
 	 */
 	@Override
 	public void removeMedia(int index) {
-		if (index>=0 && index<playlist.size() && indexer!=null) { //only do something if uri is not null and not empty
+		if (index>=0 && index<playlist.size()) { //only do something if uri is not null and not empty
 			URI uriObject=playlist.remove(index).getUri();
-			try {
-				indexer.removeUri(uriObject.toString());
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
 			postEvent(uriObject,PlaylistInterface.REMOVE_EVENT);
 		}
 	}
@@ -193,15 +207,15 @@ public class Playlist implements PlaylistInterface {
 	 * @see org.bragi.playlist.PlaylistInterface#insertMedia(int, java.lang.String)
 	 */
 	@Override
-	public void insertMedia(int index, String uri) {
-		if (uri!=null && !uri.isEmpty() && indexer!=null) { //only do something if uri is not null and not empty
+	public void insertMedia(int index, String uri) throws URISyntaxException {
+		if (uri!=null && !uri.isEmpty() && metaDataProvider!=null) { //only do something if uri is not null and not empty
 			URI uriObject = URI.create(uri);
 			PlaylistEntry entry=new PlaylistEntry();
 			entry.setUri(uriObject);
 			int oldSize=playlist.size();
 			playlist.add(index, entry);
 			if (oldSize!=playlist.size()) {
-				indexer.indexUri(uri);
+				entry.setMetaData(createMetaData(uri));
 				HashMap<String,Object> eventData=new HashMap<>();
 				eventData.put(URI_EVENTDATA, uriObject);
 				eventData.put(INDEX_EVENTDATA, index);
@@ -250,10 +264,7 @@ public class Playlist implements PlaylistInterface {
 				sequence.addComponent(media);
 			}
 			URI uri=URI.create(url);
-			String extension=uri.getPath();
-			extension=extension.substring(extension.lastIndexOf("."));
-			//create specific playlist
-			SpecificPlaylistProvider provider = SpecificPlaylistFactory.getInstance().findProviderByExtension(extension);
+			SpecificPlaylistProvider provider = getPlaylistProvider(uri);
 			//"wrap" generic playlist in specific playlist
 			SpecificPlaylist specificPlaylist = provider.toSpecificPlaylist(genericPlaylist);
 			//save the playlist
@@ -286,20 +297,30 @@ public class Playlist implements PlaylistInterface {
 			Log log=LogFactory.getLog(getClass());
 			//create URI-object for given URL
 			URI uri=URI.create(url);
-			//get extension of URL
-			String extension=uri.getPath();
-			extension=extension.substring(extension.lastIndexOf("."));
-			//get playlistprovider for the extension
-			SpecificPlaylistProvider provider = SpecificPlaylistFactory.getInstance().findProviderByExtension(extension);
+			SpecificPlaylistProvider provider = getPlaylistProvider(uri);
 			//load the playlist
-			SpecificPlaylist specificPlaylist=provider.readFrom(new FileInputStream(new File(uri)), null, log);
-			playlist.clear();
-			//traverse the playlist and visit it's entries using an instance of LucenePlaylistVisitor
-			christophedelory.playlist.Playlist genericPlaylist=specificPlaylist.toPlaylist();
-			genericPlaylist.acceptDown(new PlaylistVisitor());
+			try (FileInputStream fileInputStream = new FileInputStream(new File(uri))) {
+				SpecificPlaylist specificPlaylist=provider.readFrom(fileInputStream, null, log);
+				playlist.clear();
+				//traverse the playlist and visit it's entries using an instance of LucenePlaylistVisitor
+				christophedelory.playlist.Playlist genericPlaylist=specificPlaylist.toPlaylist();
+				genericPlaylist.acceptDown(new PlaylistVisitor());
+			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+	}
+	/**
+	 * @param uri
+	 * @return
+	 */
+	private SpecificPlaylistProvider getPlaylistProvider(URI uri) {
+		//get extension of URL
+		String extension=uri.getPath();
+		extension=extension.substring(extension.lastIndexOf("."));
+		//get playlistprovider for the extension
+		SpecificPlaylistProvider provider = SpecificPlaylistFactory.getInstance().findProviderByExtension(extension);
+		return provider;
 	}
 
 	/**
@@ -316,38 +337,13 @@ public class Playlist implements PlaylistInterface {
 	}
 	
 	@Override
-	public List<PlaylistEntry> filter(String query, MetaDataEnum... metaData) {
-//		Map<URI, Map<MetaDataEnum, String>> retValue = new Hashtable<>();
-//		if (query!=null && indexer!=null) {
-//			try {
-//				retValue=indexer.filter(query, metaData);
-//				//TODO currently necessary as sorting is not possible. And won't be included in 1.0! In 2.0 a DSL for queries will be included
-//				SortedMap<URI, Map<MetaDataEnum, String>> sortedRetValue=new TreeMap<>(new PlaylistEntryComparator());
-//				for (Entry<URI, Map<MetaDataEnum, String>>  entry: retValue.entrySet()) {
-//					sortedRetValue.put(entry.getKey(), entry.getValue());
-//				}
-//				return sortedRetValue;
-//			} catch (Exception e) {
-//				e.printStackTrace();
-//			}
-//		}
-//		return retValue;
+	public List<PlaylistEntry> filter(String query) {
 		List<PlaylistEntry> retValue = new ArrayList<>();
-		if (query!=null && indexer!=null) {
+		if (query!=null && queryParser!=null) {
 			try {
-				Map<URI,Map<MetaDataEnum,String>> filteredMetaData=indexer.filter(query, metaData);
-				//retValue=filteredMetaData.stream().map(Playlist::createPlaylistEntry).collect(Collectors.toList());
-				playlist.stream().filter(entry->filteredMetaData.containsKey(entry.getUri())).forEach(entry->{
-					entry.setMetaData(filteredMetaData.get(entry.getUri()));
-					retValue.add(entry);
-				});
-//								 .sorted(new PlaylistEntryComparator())
-//								 .forEach(entry->{
-//									 PlaylistEntry playlistEntry=new PlaylistEntry();
-//									 playlistEntry.setUri(entry);
-//									 playlistEntry.setMetaData(filteredMetaData.get(entry));
-//									 retValue.add(playlistEntry);
-//								 });
+				Map<URI, Map<MetaDataEnum, String>> metaData=playlist.stream().distinct().collect(Collectors.toMap(entry->entry.getUri(),entry->entry.getMetaData()));
+				Map<URI, Map<MetaDataEnum, String>> filteredMetaData=queryParser.execute(query, metaData);
+				return playlist.stream().filter(entry->filteredMetaData.containsKey(entry.getUri())).collect(Collectors.toList());
 			} catch (Exception e) {
 				e.printStackTrace();
 			}

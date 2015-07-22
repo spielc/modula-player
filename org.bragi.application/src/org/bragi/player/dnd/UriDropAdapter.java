@@ -18,14 +18,10 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-import org.bragi.metadata.MetaDataEnum;
 import org.bragi.playlist.PlaylistEntry;
 import org.bragi.playlist.PlaylistInterface;
 import org.eclipse.jface.viewers.TableViewer;
-import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.jface.viewers.ViewerDropAdapter;
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.DropTargetEvent;
@@ -62,7 +58,7 @@ public class UriDropAdapter extends ViewerDropAdapter {
 		String droppedData=data.toString();
 		PlaylistInterface playlist=(PlaylistInterface) viewer.getInput();
 		if (playlist!=null) {
-			List<PlaylistEntry> playlistEntries = playlist.filter("*", MetaDataEnum.values());
+			List<PlaylistEntry> playlistEntries = playlist.filter("SELECT *");
 			int location = getCurrentLocation();
 			Object currentTarget = getCurrentTarget();
 			int targetIndex=playlistEntries.size();
@@ -97,7 +93,11 @@ public class UriDropAdapter extends ViewerDropAdapter {
 				pattern = Pattern.compile(".*URI='([^;]*)'");
 				matcher=pattern.matcher(line);
 				if (matcher.find())
-					playlist.insertMedia(realTargetIndex+indexAdjustment.getAndIncrement(), matcher.group(1));
+					try {
+						playlist.insertMedia(realTargetIndex+indexAdjustment.getAndIncrement(), matcher.group(1));
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
 			});
 //			PlaylistEntry currentTargetEntry=playlistEntryFromString(currentTarget.toString());
 //			int currentIndex=Integer.parseInt(currentTarget.toString().split(";;")[0]);

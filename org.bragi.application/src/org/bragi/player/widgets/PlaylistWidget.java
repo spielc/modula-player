@@ -26,7 +26,6 @@ import org.bragi.player.helpers.QueryHelpers;
 import org.bragi.player.statemachines.EngineStateEnum;
 import org.bragi.playlist.PlaylistEntry;
 import org.bragi.playlist.PlaylistInterface;
-import org.bragi.query.ParseException;
 import org.eclipse.jface.viewers.ColumnLabelProvider;
 import org.eclipse.jface.viewers.DoubleClickEvent;
 import org.eclipse.jface.viewers.IDoubleClickListener;
@@ -190,7 +189,7 @@ public class PlaylistWidget extends Composite {
 	}
 
 	private static String[] playlist2StringArray(PlaylistInterface playlist) {
-		List<PlaylistEntry> playlistEntries = playlist.filter("*", MetaDataEnum.values());
+		List<PlaylistEntry> playlistEntries = playlist.filter("SELECT *");
 		final AtomicInteger i=new AtomicInteger(-1);
 		String[] lines=playlistEntries.stream().map(entry->(i.incrementAndGet())+";;URI='"+entry.getUri().toString()+"'"+entry.getMetaData().entrySet().stream().map(metaData->";;"+metaData.getKey().name()+"='"+metaData.getValue()+"'").collect(Collectors.joining())).toArray(String[]::new);
 		return lines;
