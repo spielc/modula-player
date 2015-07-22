@@ -18,6 +18,7 @@ import java.util.Map;
 import javax.swing.event.EventListenerList;
 
 import org.bragi.engine.EngineInterface;
+import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.osgi.service.event.Event;
@@ -27,7 +28,7 @@ import org.osgi.service.event.EventHandler;
  * @author christoph
  *
  */
-@org.osgi.service.component.annotations.Component(property={"event.topics=org/bragi/engine/event/*"},immediate=true)
+@Component(property={"event.topics=org/bragi/engine/event/*"},immediate=true)
 public class EngineStateMachine implements EventHandler {
 	
 	private EventListenerList listeners;

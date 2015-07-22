@@ -140,6 +140,13 @@ public class QueryParserTest {
 	}
 	
 	@Test
+	public void testParseNegativeIntegerNumberEnd() throws ParseException {
+		QueryParser parser=new QueryParser();
+		Map<URI,Map<MetaDataEnum,String>> result=parser.execute("SELECT ALBUM WHERE TRACK_ID = -300", metaData);
+		Assert.assertTrue(result.isEmpty());
+	}
+	
+	@Test
 	public void testParseIntegerNumberEnd() throws ParseException {
 		QueryParser parser=new QueryParser();
 		Map<URI,Map<MetaDataEnum,String>> result=parser.execute("SELECT ALBUM WHERE TRACK_ID = 300", metaData);
@@ -160,6 +167,12 @@ public class QueryParserTest {
 		result.forEach((key,value)->Assert.assertEquals(2, value.keySet().size()));
 	}
 	
+	@Test
+	public void testParseNegativeFloatingPointNumberEnd() throws ParseException {
+		QueryParser parser=new QueryParser();
+		Map<URI,Map<MetaDataEnum,String>> result=parser.execute("SELECT ALBUM WHERE RATING = -3.14159", metaData);
+	}
+		
 	@Test(expected=ParseException.class)
 	public void testParseMinusEnd() throws ParseException {
 		QueryParser parser=new QueryParser();

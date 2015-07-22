@@ -142,6 +142,20 @@ public class QueryParser implements QueryParserInterface {
 							throw new ParseException(token.getType(), TokenType.APOSTROPHE);
 					} while(token.getType()!=TokenType.APOSTROPHE);
 					break;
+				case MINUS:
+					value="-";
+					token=scanner.scan();
+					if (token.getType()!=TokenType.NUMBER)
+						throw new ParseException(token.getType(), TokenType.NUMBER);
+					value+=token.getValue();
+					token=scanner.scan();
+					if (token.getType()==TokenType.PERIOD) {
+						token=scanner.scan();
+						if (token.getType()!=TokenType.NUMBER)
+							throw new ParseException(token.getType(), TokenType.NUMBER);
+						value+="."+token.getValue();
+					}
+					break;
 				default:
 					throw new ParseException(token.getType(), TokenType.NUMBER, TokenType.APOSTROPHE);
 				}
@@ -162,6 +176,8 @@ public class QueryParser implements QueryParserInterface {
 	
 	@Override
 	public Map<URI,Map<MetaDataEnum,String>> execute(String query, Map<URI,Map<MetaDataEnum,String>> metaData) throws ParseException {
+		queriedMetaData.clear();
+		filter=null;
 		parse(query);
 //		Map<URI,Map<MetaDataEnum,String>> metaData=indexer.fetch();
 		metaData.replaceAll((key, value)->value.entrySet().stream().filter(entry->queriedMetaData.contains(entry.getKey())).collect(Collectors.toMap(entry->entry.getKey(), entry->entry.getValue())));
