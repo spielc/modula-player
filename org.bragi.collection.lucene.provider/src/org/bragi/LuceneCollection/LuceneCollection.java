@@ -35,26 +35,41 @@ import org.bragi.collection.CollectionEntry;
 import org.bragi.collection.CollectionInterface;
 import org.bragi.indexer.IndexerInterface;
 import org.bragi.metadata.MetaDataEnum;
+import org.bragi.playlist.PlaylistEntry;
+import org.bragi.query.QueryParserInterface;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
+
+import aQute.bnd.annotation.metatype.Meta;
 
 /**
  * @author christoph
  *
  */
-@org.osgi.service.component.annotations.Component()
+@Component()
 public class LuceneCollection implements CollectionInterface {
 	
 	private EventAdmin eventAdmin;
 	//private MetaDataProviderInterface metaDataProvider;
 	private IndexerInterface indexer;
 	private CollectionChangeHandlerThread collectionChangeHandler;
+	private QueryParserInterface queryParser;
 	
 	public LuceneCollection() throws IOException {
 		collectionChangeHandler=new CollectionChangeHandlerThread();
 	}
 	
-	@org.osgi.service.component.annotations.Reference
+	@Reference
+	public void setQueryParser(QueryParserInterface pQueryParser) {
+		queryParser=pQueryParser;
+	}
+	public void unsetQueryParser(QueryParserInterface pQueryParser) {
+		queryParser=null;
+	}
+	
+	@Reference
 	public void setEventAdmin(EventAdmin pEventAdmin) {
 		eventAdmin=pEventAdmin;
 		collectionChangeHandler.setEventAdmin(pEventAdmin);
@@ -64,29 +79,34 @@ public class LuceneCollection implements CollectionInterface {
 		collectionChangeHandler.setEventAdmin(null);
 	}
 	
-	@org.osgi.service.component.annotations.Reference(target="(type=CollectionIndexer)")
+	@Reference(target="(type=CollectionIndexer)")
 	public void setIndexer(IndexerInterface pIndexer) {
 		indexer=pIndexer;
 		collectionChangeHandler.setIndexer(pIndexer);
 		if (indexer!=null) {
 			try {
-//				Map<URI,Map<MetaDataEnum,String>> collectionEntries=indexer.filter("*", MetaDataEnum.TITLE);
-//				// (re-)register directories of collection in collectionChangeHandler
-//				collectionEntries.entrySet().parallelStream()
-//											.map(entry->entry.getKey())
-//											.map(Paths::get)
-//											.map(path->path.getParent())
-//											.filter(path->path!=null)
-//											.distinct()
-//											.forEach(path->{
-//												try {
-//													collectionChangeHandler.register(path);
-//												} catch (Exception e) {
-//													e.printStackTrace();
-//												}
-//											});
+				Map<URI,Map<MetaDataEnum,String>> collectionEntries=indexer.filter("*", MetaDataEnum.TITLE);
+				System.out.println();
+				// (re-)register directories of collection in collectionChangeHandler
+				String[] bla=collectionEntries.entrySet().parallelStream()
+											.map(entry->entry.getKey())
+											.map(Paths::get)
+											.map(path->path.getParent())
+											.filter(path->path!=null)
+											.distinct()
+											.map(Object::toString)
+											.toArray(String[]::new);
+				Path rootPath=Paths.get(commonPath(bla));
+				Files.walk(rootPath, FileVisitOption.FOLLOW_LINKS).filter(path->path.toFile().isDirectory())
+											.forEach(path->{
+												try {
+													collectionChangeHandler.register(path);
+												} catch (Exception e) {
+													System.out.println("collectionChangeHandler.register failed for: "+path.toString());
+												}
+											});
 //				// TODO iterate over all files in all parent directories of collectionEntries and index the ones that are not yet contained in the index
-//				//directories.map
+				//directories.map
 //				collectionEntries.entrySet().parallelStream()
 //											.map(entry->entry.getKey())
 //											.map(Paths::get)
@@ -101,9 +121,11 @@ public class LuceneCollection implements CollectionInterface {
 //														 //.collect(Collectors.toList())
 //														 .forEach(path1->indexer.indexUri(path1));
 //												} catch (Exception e) {
-//													e.printStackTrace();
+//													System.out.println("indexer.indexUri failed for: "+path.toString());
 //												}
 //											});
+				collectionChangeHandler.setActive(true);
+				collectionChangeHandler.start();
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -122,7 +144,26 @@ public class LuceneCollection implements CollectionInterface {
 		}
 		setIndexer(null);
 	}
-		
+	
+	static String commonPath(String...  paths){
+		String commonPath = "";
+		String[][] folders = new String[paths.length][];
+ 
+		for(int i=0; i<paths.length; i++){
+			folders[i] = paths[i].split("/");
+		}
+ 
+		for(int j = 0; j< folders[0].length; j++){
+			String s = folders[0][j];
+			for(int i=1; i<paths.length; i++){
+				if(!s.equals(folders[i][j]))
+					return commonPath;
+			}
+			commonPath += s + "/";
+		}
+		return commonPath;		
+	}
+	
 //	@Reference
 //	public void setMetaDataProvider(MetaDataProviderInterface pMetaDataProvider) {
 //		metaDataProvider=pMetaDataProvider;
@@ -224,5 +265,22 @@ public class LuceneCollection implements CollectionInterface {
 		collectionEntry.setUri(entry.getKey());
 		collectionEntry.setMetaData(entry.getValue());
 		return collectionEntry;
+	}
+
+	@Override
+	public List<CollectionEntry> filter(String query) {
+		List<CollectionEntry> returnValue=new ArrayList<>();
+		if ((query!=null) && (queryParser!=null)) {
+			MetaDataEnum[] metaDataValues=new MetaDataEnum[]{};
+			metaDataValues=EnumSet.allOf(MetaDataEnum.class).toArray(metaDataValues);
+			try {
+				Map<URI,Map<MetaDataEnum,String>> collectionMetaData=indexer.filter("*", metaDataValues);
+				collectionMetaData=queryParser.execute(query, collectionMetaData);
+				returnValue=collectionMetaData.entrySet().stream().map(LuceneCollection::createCollectionEntry).collect(Collectors.toList());
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		return returnValue;
 	}
 }

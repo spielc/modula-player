@@ -109,7 +109,8 @@ public class CollectionWidget extends Composite {
 		TreeNode node=(TreeNode)selection.getFirstElement();
 		// TODO currently we only support one collection
 		if (!collections.isEmpty()) {
-			List<CollectionEntry> filteredCollection=collections.get(0).filter(node.getQuery(), MetaDataEnum.values());
+			//List<CollectionEntry> filteredCollection=collections.get(0).filter(node.getQuery(), MetaDataEnum.values());
+			List<CollectionEntry> filteredCollection=collections.get(0).filter("SELECT *");
 			retValue = QueryHelpers.QueryResult2String(filteredCollection);
 		}
 		return retValue;

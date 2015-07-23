@@ -21,14 +21,8 @@
 	osgi.identity;filter:='(osgi.identity=org.apache.felix.gogo.command)',\
 	osgi.identity;filter:='(osgi.identity=org.apache.aries.spifly.dynamic.bundle)',\
 	osgi.identity;filter:='(osgi.identity=org.apache.felix.scr)',\
-	osgi.identity;filter:='(osgi.identity=org.apache.felix.fileinstall)',\
-	osgi.identity;filter:='(osgi.identity=com.mysema.querydsl.core)',\
-	osgi.identity;filter:='(osgi.identity=com.mysema.querydsl.lucene)'
+	osgi.identity;filter:='(osgi.identity=org.apache.felix.fileinstall)'
 -runbundles: \
-	com.google.guava;version='[18.0.0,18.0.1)',\
-	com.mysema.commons.lang;version='[0.2.4,0.2.5)',\
-	com.mysema.querydsl.core;version='[3.6.3,3.6.4)',\
-	com.mysema.querydsl.lucene;version='[3.4.0,3.4.1)',\
 	com.sun.jna;version='[3.0.0,3.0.1)',\
 	jaudiotagger-2.0.3;version='[2.0.3,2.0.4)',\
 	jna.platform-3.5.2;version='[3.5.2,3.5.3)',\
@@ -52,13 +46,13 @@
 	org.apache.servicemix.bundles.lucene-queryparser;version='[4.10.2,4.10.3)',\
 	org.apache.servicemix.bundles.lucene-sandbox;version='[4.10.2,4.10.3)',\
 	org.apache.servicemix.bundles.oro;version='[2.0.8,2.0.9)',\
-	org.bragi.application;version=latest,\
-	org.bragi.collection.lucene.provider;version=latest,\
-	org.bragi.engine.vlcj.provider;version=latest,\
-	org.bragi.indexer.lucene.provider;version=latest,\
-	org.bragi.metadata.jaudiotagger.provider;version=latest,\
-	org.bragi.playlist.provider;version=latest,\
-	org.bragi.query.provider;version=latest,\
+	org.bragi.application;version='[1.0.0,1.0.1)',\
+	org.bragi.collection.lucene.provider;version='[1.0.0,1.0.1)',\
+	org.bragi.engine.vlcj.provider;version='[1.0.0,1.0.1)',\
+	org.bragi.indexer.lucene.provider;version='[1.0.0,1.0.1)',\
+	org.bragi.metadata.jaudiotagger.provider;version='[1.0.0,1.0.1)',\
+	org.bragi.playlist.provider;version='[1.0.0,1.0.1)',\
+	org.bragi.query.provider;version='[1.0.0,1.0.1)',\
 	org.eclipse.core.commands;version='[3.6.100,3.6.101)',\
 	org.eclipse.equinox.common;version='[3.6.200,3.6.201)',\
 	org.eclipse.equinox.supplement;version='[1.5.100,1.5.101)',\

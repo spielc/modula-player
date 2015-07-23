@@ -151,7 +151,7 @@ public class LuceneIndexer {
 		
 		try {
 			Query q = queryParser.parse(query);
-			TopScoreDocCollector collector = TopScoreDocCollector.create(100, true);
+			TopScoreDocCollector collector = TopScoreDocCollector.create(5000, true);
 			searcher.search(q, collector);
 			for (ScoreDoc hit : collector.topDocs().scoreDocs) {
 				int docId = hit.doc;

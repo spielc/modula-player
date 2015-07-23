@@ -26,7 +26,6 @@ import org.bragi.player.helpers.QueryHelpers;
 import org.bragi.player.statemachines.EngineStateEnum;
 import org.bragi.playlist.PlaylistEntry;
 import org.bragi.playlist.PlaylistInterface;
-import org.bragi.query.ParseException;
 import org.eclipse.jface.viewers.ColumnLabelProvider;
 import org.eclipse.jface.viewers.DoubleClickEvent;
 import org.eclipse.jface.viewers.IDoubleClickListener;
