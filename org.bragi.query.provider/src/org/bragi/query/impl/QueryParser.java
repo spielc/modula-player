@@ -105,60 +105,7 @@ public class QueryParser implements QueryParserInterface {
 				if (token.getType()!=TokenType.OPERATOR)
 					throw new ParseException(token.getType(), TokenType.OPERATOR);
 				String operator=token.getValue();
-				token=scanner.scan();
-				switch (token.getType()) {
-				case NUMBER:
-					value = token.getValue();
-					token=scanner.scan();
-					switch(token.getType()) {
-					case PERIOD:
-						token=scanner.scan();
-						if (token.getType()!=TokenType.NUMBER)
-							throw new ParseException(token.getType(), TokenType.NUMBER);
-						value+="."+token.getValue();
-						break;
-					case MINUS:
-						token=scanner.scan();
-						if (token.getType()!=TokenType.NUMBER)
-							throw new ParseException(token.getType(), TokenType.NUMBER);
-						value+="-"+token.getValue();
-						token=scanner.scan();
-						if (token.getType()!=TokenType.MINUS)
-							throw new ParseException(token.getType(), TokenType.MINUS);
-						token=scanner.scan();
-						if (token.getType()!=TokenType.NUMBER)
-							throw new ParseException(token.getType(), TokenType.NUMBER);
-						value+="-"+token.getValue();
-						break;
-					}
-					break;
-				case APOSTROPHE:
-					value="";
-					do {
-						Token lastToken=token;
-						token=scanner.scan();
-						value+=token.getValue();
-						if (lastToken.getType()==TokenType.NONE && token.getType()==TokenType.NONE)
-							throw new ParseException(token.getType(), TokenType.APOSTROPHE);
-					} while(token.getType()!=TokenType.APOSTROPHE);
-					break;
-				case MINUS:
-					value="-";
-					token=scanner.scan();
-					if (token.getType()!=TokenType.NUMBER)
-						throw new ParseException(token.getType(), TokenType.NUMBER);
-					value+=token.getValue();
-					token=scanner.scan();
-					if (token.getType()==TokenType.PERIOD) {
-						token=scanner.scan();
-						if (token.getType()!=TokenType.NUMBER)
-							throw new ParseException(token.getType(), TokenType.NUMBER);
-						value+="."+token.getValue();
-					}
-					break;
-				default:
-					throw new ParseException(token.getType(), TokenType.NUMBER, TokenType.APOSTROPHE);
-				}
+				value = parseValue(scanner);
 				if (filter==null)
 					filter=filter(filteredMetaData, operator, value);
 				else
@@ -172,6 +119,82 @@ public class QueryParser implements QueryParserInterface {
 		default:
 			throw new ParseException(token.getType(), TokenType.WHERE);
 		}
+	}
+
+	private String parseValue(QueryScanner scanner) throws ParseException {
+		String value="";
+		Token token=scanner.scan();
+		switch (token.getType()) {
+		case MINUS:
+		case NUMBER:
+			value = parseNumber(scanner, token);
+			break;
+		case APOSTROPHE:
+			value = parseString(scanner, token);
+			break;
+		default:
+			throw new ParseException(token.getType(), TokenType.MINUS, TokenType.NUMBER, TokenType.APOSTROPHE);
+		}
+		return value;
+	}
+
+	private String parseString(QueryScanner scanner, Token token) throws ParseException {
+		String value="";
+		do {
+			Token lastToken=token;
+			token=scanner.scan();
+			value+=token.getValue();
+			if (lastToken.getType()==TokenType.NONE && token.getType()==TokenType.NONE)
+				throw new ParseException(token.getType(), TokenType.APOSTROPHE);
+		} while(token.getType()!=TokenType.APOSTROPHE);
+		return value;
+	}
+	
+	private String parseNumber(QueryScanner scanner, Token token) throws ParseException {
+		String value="";
+		switch (token.getType()) {
+		case MINUS:
+			value = "-";
+			token=scanner.scan();
+			if (token.getType()!=TokenType.NUMBER)
+				throw new ParseException(token.getType(), TokenType.NUMBER);
+		case NUMBER:
+			value += token.getValue();
+			token=scanner.scan();
+			switch(token.getType()) {
+			case PERIOD:
+				token=scanner.scan();
+				if (token.getType()!=TokenType.NUMBER)
+					throw new ParseException(token.getType(), TokenType.NUMBER);
+				value+="."+token.getValue();
+				break;
+			case MINUS:
+				value = parseDate(scanner, value);
+				break;
+			default:
+				break;
+			}
+			break;
+		default:
+			throw new ParseException(token.getType(), TokenType.MINUS, TokenType.NUMBER);
+		}
+		return value;
+	}
+
+	private String parseDate(QueryScanner scanner, String value) throws ParseException {
+		Token token;
+		token=scanner.scan();
+		if (token.getType()!=TokenType.NUMBER)
+			throw new ParseException(token.getType(), TokenType.NUMBER);
+		value+="-"+token.getValue();
+		token=scanner.scan();
+		if (token.getType()!=TokenType.MINUS)
+			throw new ParseException(token.getType(), TokenType.MINUS);
+		token=scanner.scan();
+		if (token.getType()!=TokenType.NUMBER)
+			throw new ParseException(token.getType(), TokenType.NUMBER);
+		value+="-"+token.getValue();
+		return value;
 	}
 	
 	@Override
