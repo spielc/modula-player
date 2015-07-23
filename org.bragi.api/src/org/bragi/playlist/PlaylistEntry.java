@@ -45,6 +45,16 @@ public class PlaylistEntry {
 	public void setMetaData(Map<MetaDataEnum, String> metaData) {
 		this.metaData = metaData;
 	}
-	
-	
+
+	@Override
+	public boolean equals(Object other) {
+		if (other==null || !(other instanceof PlaylistEntry))
+			return false;
+		return uri.equals(((PlaylistEntry)other).uri);
+	}
+
+	@Override
+	public int hashCode() {
+		return uri.hashCode();
+	}
 }

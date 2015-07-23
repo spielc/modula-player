@@ -11,7 +11,6 @@
  */
 package org.bragi.query.impl;
 
-
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -175,6 +174,7 @@ public class QueryParser implements QueryParserInterface {
 		}
 	}
 	
+	@Override
 	public Map<URI,Map<MetaDataEnum,String>> execute(String query, Map<URI,Map<MetaDataEnum,String>> metaData) throws ParseException {
 		queriedMetaData.clear();
 		filter=null;
