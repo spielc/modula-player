@@ -230,4 +230,12 @@ public class QueryParserTest {
 		Assert.assertEquals(2, result.size());
 		result.forEach((key,value)->Assert.assertEquals(2, value.keySet().size()));
 	}
+	
+	@Test
+	public void testParseString2() throws ParseException {
+		QueryParser parser=new QueryParser();
+		Map<URI,Map<MetaDataEnum,String>> result=parser.execute("SELECT ALBUM, TITLE, ARTIST WHERE GENRE ='Metalcore'", metaData);
+		Assert.assertEquals(2, result.size());
+		result.forEach((key,value)->Assert.assertEquals(4, value.keySet().size()));
+	}
 }

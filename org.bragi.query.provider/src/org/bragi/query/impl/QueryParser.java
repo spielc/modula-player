@@ -218,7 +218,7 @@ public class QueryParser implements QueryParserInterface {
 			queriedMetaData.add(Enum.valueOf(MetaDataEnum.class, columnName));
 			token = scanner.scan();
 			if (token.getType()==TokenType.COMMA)
-				parseColumnSpecifier(scanner, queriedMetaData);
+				token=parseColumnSpecifier(scanner, queriedMetaData);
 			break;
 		default:
 			throw new ParseException(token.getType(), TokenType.COLUMN_NAME);
