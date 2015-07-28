@@ -219,14 +219,14 @@ public class QueryParserTest {
 	@Test
 	public void testParseEmptyString() throws ParseException {
 		QueryParser parser=new QueryParser();
-		Map<URI,Map<MetaDataEnum,String>> result=parser.execute("SELECT ALBUM WHERE ENCODED_BY =''", metaData);
+		Map<URI,Map<MetaDataEnum,String>> result=parser.execute("SELECT ALBUM WHERE ENCODED_BY =\"\"", metaData);
 		Assert.assertTrue(result.isEmpty());
 	}
 	
 	@Test
 	public void testParseString() throws ParseException {
 		QueryParser parser=new QueryParser();
-		Map<URI,Map<MetaDataEnum,String>> result=parser.execute("SELECT ALBUM WHERE GENRE ='Metalcore'", metaData);
+		Map<URI,Map<MetaDataEnum,String>> result=parser.execute("SELECT ALBUM WHERE GENRE =\"Metalcore\"", metaData);
 		Assert.assertEquals(2, result.size());
 		result.forEach((key,value)->Assert.assertEquals(2, value.keySet().size()));
 	}
@@ -234,8 +234,36 @@ public class QueryParserTest {
 	@Test
 	public void testParseString2() throws ParseException {
 		QueryParser parser=new QueryParser();
-		Map<URI,Map<MetaDataEnum,String>> result=parser.execute("SELECT ALBUM, TITLE, ARTIST WHERE GENRE ='Metalcore'", metaData);
+		Map<URI,Map<MetaDataEnum,String>> result=parser.execute("SELECT ALBUM, TITLE, ARTIST WHERE GENRE =\"Metalcore\"", metaData);
 		Assert.assertEquals(2, result.size());
 		result.forEach((key,value)->Assert.assertEquals(4, value.keySet().size()));
+	}
+	
+	@Test
+	public void testParseAndQuery() throws ParseException {
+		QueryParser parser=new QueryParser();
+		Map<URI,Map<MetaDataEnum,String>> result=parser.execute("SELECT ALBUM, TITLE, ARTIST WHERE GENRE =\"Metalcore\" AND TRACK_ID=9", metaData);
+		Assert.assertTrue(result.isEmpty());
+	}
+	
+	@Test
+	public void testParseAndQuery2() throws ParseException {
+		QueryParser parser=new QueryParser();
+		Map<URI,Map<MetaDataEnum,String>> result=parser.execute("SELECT ALBUM, TITLE, ARTIST WHERE ARTIST =\"Eluveitie\" AND TRACK_ID=9", metaData);
+		Assert.assertEquals(1, result.size());
+	}
+	
+	@Test
+	public void testParseOrQuery() throws ParseException {
+		QueryParser parser=new QueryParser();
+		Map<URI,Map<MetaDataEnum,String>> result=parser.execute("SELECT ALBUM, TITLE, ARTIST WHERE GENRE =\"bla\" OR TRACK_ID=123456789", metaData);
+		Assert.assertTrue(result.isEmpty());
+	}
+	
+	@Test
+	public void testParseOrQuery2() throws ParseException {
+		QueryParser parser=new QueryParser();
+		Map<URI,Map<MetaDataEnum,String>> result=parser.execute("SELECT ALBUM, TITLE, ARTIST WHERE ARTIST =\"Eluveitie\" OR ARTIST=\"Killswitch Engage\"", metaData);
+		Assert.assertEquals(3, result.size());
 	}
 }

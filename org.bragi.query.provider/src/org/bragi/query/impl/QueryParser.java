@@ -35,36 +35,63 @@ import org.osgi.service.component.annotations.Component;
 public class QueryParser implements QueryParserInterface {
 	
 	private List<MetaDataEnum> queriedMetaData;
-	private Predicate<Entry<MetaDataEnum,String>> filter;
+	private Predicate<Entry<URI, Map<MetaDataEnum, String>>> filter;
 	
 	public QueryParser() {
 		queriedMetaData=new ArrayList<>();
 		filter=null;
 	}
 	
-	private Predicate<Entry<MetaDataEnum,String>> filter(MetaDataEnum field, String operator, String value) {
+	private Predicate<Entry<URI, Map<MetaDataEnum, String>>> filter(MetaDataEnum field, String operator, String value) {
 		if (!queriedMetaData.contains(field))
 			queriedMetaData.add(field);
 		switch(operator) {
 		case "=":
 			try {
 				Object realValue=Long.parseLong(value);
-				return entry -> entry.getKey()==field && realValue.equals(Long.parseLong(entry.getValue()));
+				return entry -> entry.getValue().entrySet().stream().anyMatch(e->e.getKey()==field && realValue.equals(Long.parseLong(e.getValue())));
+				//return entry -> entry.getKey()==field && realValue.equals(Long.parseLong(entry.getValue()));
 			} catch (NumberFormatException nfe) {
 				
 			}
 			try {
 				Object realValue=Double.parseDouble(value);
-				return entry -> entry.getKey()==field && realValue.equals(Double.parseDouble(entry.getValue()));
+				return entry -> entry.getValue().entrySet().stream().anyMatch(e->e.getKey()==field && realValue.equals(Double.parseDouble(e.getValue())));
+				//return entry -> entry.getKey()==field && realValue.equals(Double.parseDouble(entry.getValue()));
 			} catch (NumberFormatException nfe) {
 				
 			}
-			return entry -> entry.getKey()==field && entry.getValue().equals(value);
+			return entry -> entry.getValue().entrySet().stream().anyMatch(e->e.getKey()==field && value.equals(e.getValue()));
+			//return entry -> entry.getKey()==field && entry.getValue().equals(value);
 		case "<>":
-			return entry -> entry.getKey()==field && !entry.getValue().equals(value);
+			//return entry -> entry.getKey()==field && !entry.getValue().equals(value);
 		}
 		return entry -> false;
 	}
+	
+//	private Predicate<Entry<MetaDataEnum,String>> filter(MetaDataEnum field, String operator, String value) {
+//		if (!queriedMetaData.contains(field))
+//			queriedMetaData.add(field);
+//		switch(operator) {
+//		case "=":
+//			try {
+//				Object realValue=Long.parseLong(value);
+//				return entry -> entry.getKey()==field && realValue.equals(Long.parseLong(entry.getValue()));
+//			} catch (NumberFormatException nfe) {
+//				
+//			}
+//			try {
+//				Object realValue=Double.parseDouble(value);
+//				return entry -> entry.getKey()==field && realValue.equals(Double.parseDouble(entry.getValue()));
+//			} catch (NumberFormatException nfe) {
+//				
+//			}
+//			return entry -> entry.getKey()==field && entry.getValue().equals(value);
+//		case "<>":
+//			return entry -> entry.getKey()==field && !entry.getValue().equals(value);
+//		}
+//		return entry -> false;
+//	}
 	
 	private void parse(String query) throws ParseException {
 		QueryScanner scanner=new QueryScanner(query);
@@ -97,28 +124,63 @@ public class QueryParser implements QueryParserInterface {
 		}
 		switch(token.getType()) {
 		case WHERE:
-			token=scanner.scan();
-			if (token.getType()==TokenType.COLUMN_NAME) {
-				columnName=token.getValue();
-				MetaDataEnum filteredMetaData=Enum.valueOf(MetaDataEnum.class, columnName);
-				token=scanner.scan();
-				if (token.getType()!=TokenType.OPERATOR)
-					throw new ParseException(token.getType(), TokenType.OPERATOR);
-				String operator=token.getValue();
-				value = parseValue(scanner);
-				if (filter==null)
-					filter=filter(filteredMetaData, operator, value);
-				else
-					filter=filter.and(filter(filteredMetaData, operator, value));
-			}
-			else
-				throw new ParseException(token.getType(), TokenType.COLUMN_NAME);
+			parseWhereClause(scanner, TokenType.NONE);
+//			token=scanner.scan();
+//			if (token.getType()==TokenType.COLUMN_NAME) {
+//				columnName=token.getValue();
+//				MetaDataEnum filteredMetaData=Enum.valueOf(MetaDataEnum.class, columnName);
+//				token=scanner.scan();
+//				if (token.getType()!=TokenType.OPERATOR)
+//					throw new ParseException(token.getType(), TokenType.OPERATOR);
+//				String operator=token.getValue();
+//				value = parseValue(scanner);
+//				if (filter==null)
+//					filter=filter(filteredMetaData, operator, value);
+//				else
+//					filter=filter.and(filter(filteredMetaData, operator, value));
+//			}
+//			else
+//				throw new ParseException(token.getType(), TokenType.COLUMN_NAME);
 			break;
 		case NONE:
 			break;
 		default:
 			throw new ParseException(token.getType(), TokenType.WHERE);
 		}
+	}
+	
+	private void parseWhereClause(QueryScanner scanner, TokenType booleanOperator) throws ParseException {
+		Token token=scanner.scan();
+		if (token.getType()==TokenType.COLUMN_NAME) {
+			String columnName=token.getValue();
+			MetaDataEnum filteredMetaData=Enum.valueOf(MetaDataEnum.class, columnName);
+			token=scanner.scan();
+			if (token.getType()!=TokenType.OPERATOR)
+				throw new ParseException(token.getType(), TokenType.OPERATOR);
+			String operator=token.getValue();
+			String value = parseValue(scanner);
+			if (filter==null)
+				filter=filter(filteredMetaData, operator, value);
+			else {
+				switch (booleanOperator) {
+				case AND:
+					filter=filter.and(filter(filteredMetaData, operator, value));
+					break;
+				case OR:
+					filter=filter.or(filter(filteredMetaData, operator, value));
+					break;
+				default:
+					throw new ParseException(booleanOperator, TokenType.AND, TokenType.OR);
+				}
+				
+			}
+			token=scanner.scan();
+			TokenType type=token.getType();
+			if ((type==TokenType.AND) || (type==TokenType.OR))
+				parseWhereClause(scanner, type);
+		}
+		else
+			throw new ParseException(token.getType(), TokenType.COLUMN_NAME);
 	}
 
 	private String parseValue(QueryScanner scanner) throws ParseException {
@@ -129,27 +191,15 @@ public class QueryParser implements QueryParserInterface {
 		case NUMBER:
 			value = parseNumber(scanner, token);
 			break;
-		case APOSTROPHE:
-			value = parseString(scanner, token);
+		case STRING:
+			value = token.getValue();
 			break;
 		default:
-			throw new ParseException(token.getType(), TokenType.MINUS, TokenType.NUMBER, TokenType.APOSTROPHE);
+			throw new ParseException(token.getType(), TokenType.MINUS, TokenType.NUMBER, TokenType.STRING);
 		}
 		return value;
 	}
 
-	private String parseString(QueryScanner scanner, Token token) throws ParseException {
-		String value="";
-		do {
-			Token lastToken=token;
-			token=scanner.scan();
-			value+=token.getValue();
-			if (lastToken.getType()==TokenType.NONE && token.getType()==TokenType.NONE)
-				throw new ParseException(token.getType(), TokenType.APOSTROPHE);
-		} while(token.getType()!=TokenType.APOSTROPHE);
-		return value;
-	}
-	
 	private String parseNumber(QueryScanner scanner, Token token) throws ParseException {
 		String value="";
 		switch (token.getType()) {
@@ -205,7 +255,8 @@ public class QueryParser implements QueryParserInterface {
 //		Map<URI,Map<MetaDataEnum,String>> metaData=indexer.fetch();
 		metaData.replaceAll((key, value)->value.entrySet().stream().filter(entry->queriedMetaData.contains(entry.getKey())).collect(Collectors.toMap(entry->entry.getKey(), entry->entry.getValue())));
 		if (filter!=null) 
-			metaData=metaData.entrySet().stream().filter(entry->entry.getValue().entrySet().stream().anyMatch(filter)).collect(Collectors.toMap(entry->entry.getKey(), entry->entry.getValue()));
+			//metaData=metaData.entrySet().stream().filter(entry->entry.getValue().entrySet().stream().peek(System.out::println).anyMatch(filter)).collect(Collectors.toMap(entry->entry.getKey(), entry->entry.getValue()));
+			metaData=metaData.entrySet().stream().filter(filter).collect(Collectors.toMap(entry->entry.getKey(), entry->entry.getValue()));
 		return metaData;
 	}
 	

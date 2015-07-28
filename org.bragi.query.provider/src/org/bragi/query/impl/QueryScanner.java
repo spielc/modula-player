@@ -37,6 +37,8 @@ class QueryScanner {
 		KEYWORDS.add(QueryKeywords.BY);
 		KEYWORDS.add(QueryKeywords.ORDER_DIRECTION_ASC);
 		KEYWORDS.add(QueryKeywords.ORDER_DIRECTION_DESC);
+		KEYWORDS.add(QueryKeywords.AND);
+		KEYWORDS.add(QueryKeywords.OR);
 		EnumSet<MetaDataEnum> metaData=EnumSet.allOf(MetaDataEnum.class);
 		KEYWORDS.addAll(metaData.stream().map(MetaDataEnum::name).collect(Collectors.toList()));
 		STRING_TOKENTYPE_MAP=new Hashtable<>();
@@ -46,6 +48,8 @@ class QueryScanner {
 		STRING_TOKENTYPE_MAP.put(QueryKeywords.BY, TokenType.BY);
 		STRING_TOKENTYPE_MAP.put(QueryKeywords.ORDER_DIRECTION_ASC, TokenType.ORDER_DIRECTION);
 		STRING_TOKENTYPE_MAP.put(QueryKeywords.ORDER_DIRECTION_DESC, TokenType.ORDER_DIRECTION);
+		STRING_TOKENTYPE_MAP.put(QueryKeywords.OR, TokenType.OR);
+		STRING_TOKENTYPE_MAP.put(QueryKeywords.AND, TokenType.AND);
 		STRING_TOKENTYPE_MAP.putAll(metaData.stream().map(MetaDataEnum::name).collect(Collectors.toMap(m->m, m->TokenType.COLUMN_NAME)));
 	}
 
@@ -86,7 +90,7 @@ class QueryScanner {
 			token.setType(STRING_TOKENTYPE_MAP.get(name.toString()));
 		}
 		else
-			token.setType(TokenType.STRING);
+			token.setType(TokenType.NAME);
 		token.setValue(name.toString());
 	}
 	
@@ -110,11 +114,26 @@ class QueryScanner {
 		token.setType(TokenType.NUMBER);
 	}
 	
+	private void readString(Token token) {
+		StringBuffer string=new StringBuffer();
+		nextCh();
+		while((ch!='"') && (ch!=eofCh)) {
+			string.append(ch);
+			nextCh();
+		}
+		if (ch==eofCh)
+			token.setType(TokenType.NONE);
+		else {
+			nextCh();
+			token.setValue(string.toString());
+			token.setType(TokenType.STRING);
+		}
+	}
+	
 	/* (non-Javadoc)
 	 * @see org.bragi.indexer.QueryInterface#scan()
 	 */
 	Token scan() {
-		// TODO current limitations: string-values mustn't contain a ' ', '\n', '\r'
 		while (ch <= ' ') nextCh(); // skip blanks, tabs, eols
 		Token token = new Token();
 		switch (ch) {
@@ -133,9 +152,8 @@ class QueryScanner {
 			token.setType(TokenType.MINUS);
 			nextCh();
 			break;
-		case '\'':
-			token.setType(TokenType.APOSTROPHE);
-			nextCh();
+		case '"':
+			readString(token);
 			break;
 		case ',':
 			token.setType(TokenType.COMMA);

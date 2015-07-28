@@ -15,4 +15,6 @@ public final class QueryKeywords {
 	public static final String BY = "BY";
 	public static final String ORDER_DIRECTION_ASC = "ASC";
 	public static final String ORDER_DIRECTION_DESC = "DESC";
+	public static final String OR = "OR";
+	public static final String AND = "AND";
 }

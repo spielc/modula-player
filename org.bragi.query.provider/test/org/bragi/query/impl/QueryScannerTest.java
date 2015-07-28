@@ -44,6 +44,24 @@ public class QueryScannerTest {
 	}
 	
 	@Test
+	public void scanOrTest() {
+		QueryScanner scanner=new QueryScanner(QueryKeywords.OR);
+		Token token=scanner.scan();
+		Assert.assertEquals(TokenType.OR, token.getType());
+		token=scanner.scan();
+		Assert.assertEquals(TokenType.NONE, token.getType());
+	}
+	
+	@Test
+	public void scanAndTest() {
+		QueryScanner scanner=new QueryScanner(QueryKeywords.AND);
+		Token token=scanner.scan();
+		Assert.assertEquals(TokenType.AND, token.getType());
+		token=scanner.scan();
+		Assert.assertEquals(TokenType.NONE, token.getType());
+	}
+	
+	@Test
 	public void scanOrderByTest() {
 		QueryScanner scanner=new QueryScanner("ORDER BY");
 		Token token=scanner.scan();
@@ -93,33 +111,34 @@ public class QueryScannerTest {
 	}
 	
 	@Test
-	public void scanApostropheTest() {
-		QueryScanner scanner=new QueryScanner("'");
-		Token token=scanner.scan();
-		Assert.assertEquals(TokenType.APOSTROPHE, token.getType());
-		token=scanner.scan();
-		Assert.assertEquals(TokenType.NONE, token.getType());
-	}
-	
-	@Test
-	public void scanStringTest() {
+	public void scanNameTest() {
 		QueryScanner scanner=new QueryScanner("bla");
 		Token token=scanner.scan();
-		Assert.assertEquals(TokenType.STRING, token.getType());
-		String[] keywords={QueryKeywords.SELECT, QueryKeywords.FROM, QueryKeywords.WHERE, QueryKeywords.ORDER_DIRECTION_ASC, QueryKeywords.ORDER_DIRECTION_DESC};
+		Assert.assertEquals(TokenType.NAME, token.getType());
+		String[] keywords={QueryKeywords.SELECT, QueryKeywords.FROM, QueryKeywords.WHERE, QueryKeywords.ORDER_DIRECTION_ASC, QueryKeywords.ORDER_DIRECTION_DESC, QueryKeywords.AND, QueryKeywords.OR};
 		for (String keyword : keywords) {
 			scanner=new QueryScanner(keyword.substring(0, keyword.length()-1));
 			token=scanner.scan();
-			Assert.assertEquals(TokenType.STRING, token.getType());
+			Assert.assertEquals(TokenType.NAME, token.getType());
 		}
 		
 		scanner=new QueryScanner("test123");
 		token=scanner.scan();
-		Assert.assertEquals(TokenType.STRING, token.getType());
+		Assert.assertEquals(TokenType.NAME, token.getType());
 		scanner=new QueryScanner("öäü");
 		token=scanner.scan();
-		Assert.assertEquals(TokenType.STRING, token.getType());
+		Assert.assertEquals(TokenType.NAME, token.getType());
 		scanner=new QueryScanner("ÄÖÜ");
+		token=scanner.scan();
+		Assert.assertEquals(TokenType.NAME, token.getType());
+	}
+	
+	@Test
+	public void scanStringTest() {
+		QueryScanner scanner=new QueryScanner("\"Killswitch Engage\"");
+		Token token=scanner.scan();
+		Assert.assertEquals(TokenType.STRING, token.getType());
+		scanner=new QueryScanner("\"^!§$%&/()=?\f+#-.,<>|;:_'*\rabcdefghijklmnopqrstuvwxyzöäü\tABCDEFGHIJKLMNOPQRSTUVWXYZÖÄÜ\n1234567890\"");
 		token=scanner.scan();
 		Assert.assertEquals(TokenType.STRING, token.getType());
 	}
@@ -223,7 +242,7 @@ public class QueryScannerTest {
 	
 	@Test
 	public void scanSimpleQueryWithWhereTest() {
-		QueryScanner scanner=new QueryScanner("SELECT * WHERE ALBUM = 'Runes'");
+		QueryScanner scanner=new QueryScanner("SELECT * WHERE ALBUM = \"Runes\"");
 		Token token=scanner.scan();
 		Assert.assertEquals(TokenType.SELECT, token.getType());
 		token=scanner.scan();
@@ -237,12 +256,8 @@ public class QueryScannerTest {
 		Assert.assertEquals(TokenType.OPERATOR, token.getType());
 		Assert.assertEquals("=", token.getValue());
 		token=scanner.scan();
-		Assert.assertEquals(TokenType.APOSTROPHE, token.getType());
-		token=scanner.scan();
 		Assert.assertEquals(TokenType.STRING, token.getType());
 		Assert.assertEquals("Runes", token.getValue());
-		token=scanner.scan();
-		Assert.assertEquals(TokenType.APOSTROPHE, token.getType());
 		token=scanner.scan();
 		Assert.assertEquals(TokenType.NONE, token.getType());
 	}

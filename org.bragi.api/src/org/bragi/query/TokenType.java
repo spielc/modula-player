@@ -18,9 +18,11 @@ public enum TokenType {
 	BY,
 	COMMA, 
 	NUMBER,
-	MINUS,
-	APOSTROPHE, 
+	MINUS, 
 	PERIOD,
 	STRING,
-	COLUMN_NAME
+	COLUMN_NAME,
+	AND,
+	OR,
+	NAME
 }
