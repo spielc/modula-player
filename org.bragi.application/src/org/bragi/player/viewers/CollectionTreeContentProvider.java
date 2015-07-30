@@ -1,11 +1,9 @@
 package org.bragi.player.viewers;
 
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+import java.util.stream.Collectors;
 
-import org.bragi.collection.CollectionEntry;
 import org.bragi.collection.CollectionInterface;
 import org.bragi.metadata.MetaDataEnum;
 import org.bragi.player.model.TreeNode;
@@ -41,6 +39,7 @@ public class CollectionTreeContentProvider implements ITreeContentProvider {
 		structureTree.setType(CollectionTreeContentProvider.ROOT);
 		structureTree.setValue("Local collection");
 		structureTree.setParent(null);
+		structureTree.setQuery("SELECT *");
 		collections=new ArrayList<>();
 	}
 	
@@ -84,48 +83,37 @@ public class CollectionTreeContentProvider implements ITreeContentProvider {
 
 	@Override
 	public Object[] getChildren(Object obj) {
-		//TODO TreeNode.query needs to track the exact query to the current node
 		TreeNode parent=((TreeNode)obj);
-		String query="";
-		if (parent.getType()!=CollectionTreeContentProvider.ROOT) {
-			query=parent.getType()+":\""+parent.getValue()+"\" AND ";
-		}
+		String query=parent.getQuery();
+		String childQuery=query;
 		MetaDataEnum meta=null;
-		if (parent.getType()==CollectionTreeContentProvider.ROOT)
+		if (parent.getType()==CollectionTreeContentProvider.ROOT) {
 			meta=MetaDataEnum.ARTIST;
+			childQuery+=" WHERE ";
+		}
 		else if (parent.getType()==MetaDataEnum.ARTIST.name())
 			meta=MetaDataEnum.ALBUM;
 		else if (parent.getType()==MetaDataEnum.ALBUM.name())
 			meta=MetaDataEnum.TITLE;
 		else if (parent.getType()==MetaDataEnum.TITLE.name())
 			return null;
-		List<TreeNode> children=new ArrayList<>();
 		CollectionInterface collection=collections.get(0);
-		List<String> entries=new ArrayList<>();
-		for(char character='A';character<='Z';character++) {
-			String newQuery=query+meta.name()+":"+character+"*";
-			List<CollectionEntry> tracks=collection.filter(newQuery,MetaDataEnum.values());
-			for(CollectionEntry trackEntry : tracks) {
-				URI trackURI=trackEntry.getUri();
-				Map<MetaDataEnum, String> metaData=trackEntry.getMetaData();
-				String entry=metaData.get(meta);
-				if (entries.contains(entry))
-					continue;
-				entries.add(entry);
-				TreeNode child=new TreeNode();
-				String childQuery="";
-				if (parent.getType()!=CollectionTreeContentProvider.ROOT)
-					childQuery=parent.getQuery()+" AND ";
-				childQuery+=meta.name()+":\""+entry+"\"";
-				child.setQuery(childQuery);
-				System.out.println(child.getQuery());
-				child.setValue(entry);
-				child.setType(meta.name());
-				child.setParent(parent);
-				children.add(child);
-			}
-		}
+		final MetaDataEnum realMeta=meta;
+		final String realChildQuery=childQuery;
+		List<TreeNode> children=collection.filter(query).stream().map(entry->entry.getMetaData().get(realMeta)).distinct().map(value->createChildNode(parent, realMeta, realChildQuery, value)).collect(Collectors.toList());
 		return children.toArray();
+	}
+	
+	private static TreeNode createChildNode(TreeNode parent, MetaDataEnum meta, String childQuery, String value) {
+		TreeNode child=new TreeNode();
+		child.setValue(value);
+		child.setParent(parent);
+		if (parent.getType()!=CollectionTreeContentProvider.ROOT)
+			childQuery+=" AND ";
+		childQuery+=meta.name()+"=\""+value+"\"";
+		child.setQuery(childQuery);
+		child.setType(meta.name());
+		return child;
 	}
 
 	@Override
