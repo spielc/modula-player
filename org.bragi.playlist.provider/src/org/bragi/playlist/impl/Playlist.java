@@ -14,6 +14,7 @@ package org.bragi.playlist.impl;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -23,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -35,7 +37,11 @@ import org.bragi.metadata.MetaDataProviderInterface;
 import org.bragi.playlist.PlaylistEntry;
 import org.bragi.playlist.PlaylistInterface;
 import org.bragi.query.QueryParserInterface;
+import org.osgi.service.cm.Configuration;
+import org.osgi.service.cm.ConfigurationAdmin;
+import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Modified;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
@@ -52,26 +58,21 @@ import christophedelory.playlist.SpecificPlaylistProvider;
  * @author christoph
  *
  */
-@Component
+@Component(name="org.bragi.playlist.impl.Playlist")
 public class Playlist implements PlaylistInterface {
 	
+	private static final String COMPONENT_NAME = "org.bragi.playlist.impl.Playlist";
+
 	/**
-	 * Private class which implements a Comparator for URI-objects.
-	 * This is used for sorting the playlist correctly
-	 * @author christoph
-	 *
+	 * String-Constants for the configuration value "repeat"
 	 */
-//	private final class PlaylistEntryComparator implements Comparator<IndexEntry> {
-//		
-//		@Override
-//		public int compare(IndexEntry o1, IndexEntry o2) {
-//			Integer index1=playlist.indexOf(o1.getUri());
-//			Integer index2=playlist.indexOf(o2.getUri());
-//			return index1.compareTo(index2);
-//		}
-//		
-//	}
+	private static final String REPEAT = "repeat";
 	
+	/**
+	 * String-Constants for the configuration value "random"
+	 */
+	private static final String RANDOM = "random";
+
 	/**
 	 * Private class which implements a PlaylistVisitor, which is used when loading a playlist to fill the playlist
 	 * with the files the playlist contains
@@ -128,6 +129,7 @@ public class Playlist implements PlaylistInterface {
 	private EventAdmin eventAdmin;
 	private MetaDataProviderInterface metaDataProvider;
 	private QueryParserInterface queryParser;
+	private ConfigurationAdmin configAdmin;
 	
 	@Reference
 	public void setEventAdmin(EventAdmin pEventAdmin) {
@@ -135,6 +137,14 @@ public class Playlist implements PlaylistInterface {
 	}
 	public void unsetEventAdmin(EventAdmin pEventAdmin) {
 		eventAdmin=null;
+	}
+	
+	@Reference
+	public void setConfigAdmin(ConfigurationAdmin pConfigAdmin) {
+		configAdmin=pConfigAdmin;
+	}
+	public void unsetConfigAdmin(ConfigurationAdmin pConfigAdmin) {
+		configAdmin=null;
 	}
 	
 	@Reference
@@ -153,16 +163,22 @@ public class Playlist implements PlaylistInterface {
 		queryParser=null;
 	}
 	
-	/**
-	 * Constructor
-	 */
-	public Playlist() {
+	@Activate
+	void activate(Map<String,Object> map) {
 		playlist=new ArrayList<>();
 		isRepeated=false;
 		isRandomized=false;
-		metaDataProvider=null;
+		modified(map);
 	}
 
+	@Modified
+	void modified(Map<String,Object> map) {
+		if (map.containsKey(RANDOM))
+			isRandomized = (boolean) map.get(RANDOM);
+		if (map.containsKey(REPEAT))
+			isRepeated = (boolean) map.get(REPEAT);
+	}
+	
 	/* (non-Javadoc)
 	 * @see org.bragi.playlist.PlaylistInterface#addMedia(java.lang.String)
 	 */
@@ -230,22 +246,6 @@ public class Playlist implements PlaylistInterface {
 	@Override
 	public void shuffle() {
 		Collections.shuffle(playlist);
-	}
-
-	/* (non-Javadoc)
-	 * @see org.bragi.playlist.PlaylistInterface#toggleRepeat()
-	 */
-	@Override
-	public void toggleRepeat() {
-		isRepeated=!isRepeated;
-	}
-
-	/* (non-Javadoc)
-	 * @see org.bragi.playlist.PlaylistInterface#toggleRandom()
-	 */
-	@Override
-	public void toggleRandom() {
-		isRandomized=!isRandomized;
 	}
 
 	/* (non-Javadoc)
@@ -349,5 +349,38 @@ public class Playlist implements PlaylistInterface {
 			}
 		}
 		return retValue;
+	}
+	@Override
+	public boolean getRepeat() {
+		return isRepeated;
+	}
+	@Override
+	public void setRepeat(boolean repeat) {
+		isRepeated=repeat;
+		createOrUpdateConfiguration();
+	}
+	@Override
+	public boolean getRandom() {
+		return isRandomized;
+	}
+	@Override
+	public void setRandom(boolean random) {
+		isRandomized=random;
+		createOrUpdateConfiguration();
+	}
+	
+	/**
+	 * This method is used to either create or update the configuration of the component
+	 */
+	private void createOrUpdateConfiguration() {
+		try {
+			Configuration configuration = configAdmin.getConfiguration(COMPONENT_NAME, "?");
+			Hashtable<String, Object> map = new Hashtable<>();
+			map.put(REPEAT, isRepeated);
+			map.put(RANDOM, isRandomized); 
+			configuration.update(map);
+		} catch (IOException ioe) {
+			ioe.printStackTrace();
+		}
 	}
 }

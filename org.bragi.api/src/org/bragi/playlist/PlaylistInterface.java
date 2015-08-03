@@ -31,10 +31,14 @@ public interface PlaylistInterface {
 	public void removeMedia(int index);
 	public void insertMedia(int index, String uri) throws URISyntaxException;
 	public void shuffle();
-	public void toggleRepeat();
-	public void toggleRandom();
 	public void save(String uri);
 	public void load(String uri);
 	// TODO Because a playlist may contain a certain URI multiple times
 	public List<PlaylistEntry> filter(String query);
+	
+	//methods for getting and setting repeat and random-state of the playlist
+	public boolean getRepeat();
+	public void setRepeat(boolean repeat);
+	public boolean getRandom();
+	public void setRandom(boolean random);
 }

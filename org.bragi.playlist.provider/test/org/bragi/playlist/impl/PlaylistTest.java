@@ -12,6 +12,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Dictionary;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Hashtable;
@@ -26,6 +27,8 @@ import org.bragi.query.QueryParserInterface;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.osgi.service.cm.Configuration;
+import org.osgi.service.cm.ConfigurationAdmin;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
 
@@ -53,6 +56,8 @@ public class PlaylistTest {
 	private EventAdmin eventAdmin;
 	private MetaDataProviderInterface metaDataProvider;
 	private QueryParserInterface queryParser;
+	private ConfigurationAdmin configurationAdmin;
+	private Configuration config;
 	
 	@Before
 	public void initTest() throws Exception {
@@ -60,6 +65,7 @@ public class PlaylistTest {
 		eventAdmin = mock(EventAdmin.class);
 		metaDataProvider = mock(MetaDataProviderInterface.class);
 		queryParser = mock(QueryParserInterface.class);
+		configurationAdmin = mock(ConfigurationAdmin.class);
 		String[] metaDataValues = new String[]{ALBUM, ARTIST, "k3b", "Metal", "en", "", RATING_TRACK_1, ALBUM, TRACKNAME_TRACK_1, "4", "http://www.ex-deo.com"};
 		Map<MetaDataEnum, String> metaDataValuesMap=new HashMap<>();
 		metaDataValuesMap.put(MetaDataEnum.ALBUM, ALBUM);
@@ -99,10 +105,14 @@ public class PlaylistTest {
 		when(queryParser.execute("",retValue)).thenReturn(new Hashtable<URI, Map<MetaDataEnum, String>>());
 		when(queryParser.execute(null,retValue)).thenReturn(new Hashtable<URI, Map<MetaDataEnum, String>>());
 		when(queryParser.execute(UNSUCCESSFUL_QUERY,retValue)).thenReturn(new Hashtable<URI, Map<MetaDataEnum, String>>());
-		
+		config=mock(Configuration.class);
+		when(configurationAdmin.getConfiguration("org.bragi.playlist.impl.Playlist", "?")).thenReturn(config);
+				
 		playlist.setEventAdmin(eventAdmin);
 		playlist.setMetaDataProvider(metaDataProvider);
 		playlist.setQueryParser(queryParser);
+		playlist.setConfigAdmin(configurationAdmin);
+		playlist.activate(new Hashtable<>());
 	}
 
 	@Test
@@ -223,5 +233,33 @@ public class PlaylistTest {
 //		Assert.assertEquals(1, filteredURIs.size());
 //		filteredURIs=playlist.filter(OR_QUERY); //test OR-query
 //		Assert.assertEquals(2, filteredURIs.size());
+	}
+	
+	@Test
+	public void repeatTest() throws IOException {
+		Dictionary<String, Object> properties = new Hashtable<>();
+		properties.put("repeat", true);
+		properties.put("random", false);
+		playlist.setRepeat(true);
+		verify(config,times(1)).update(properties);
+		Assert.assertTrue(playlist.getRepeat());
+		properties.put("repeat", false);
+		playlist.setRepeat(false);
+		verify(config,times(1)).update(properties);
+		Assert.assertFalse(playlist.getRepeat());		
+	}
+	
+	@Test
+	public void randomTest() throws IOException {
+		Dictionary<String, Object> properties = new Hashtable<>();
+		properties.put("repeat", false);
+		properties.put("random", true);
+		playlist.setRandom(true);
+		verify(config,times(1)).update(properties);
+		Assert.assertTrue(playlist.getRandom());
+		properties.put("random", false);
+		playlist.setRandom(false);
+		verify(config,times(1)).update(properties);
+		Assert.assertFalse(playlist.getRandom());		
 	}
 }
