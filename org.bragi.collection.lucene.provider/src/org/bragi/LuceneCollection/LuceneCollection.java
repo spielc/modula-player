@@ -24,6 +24,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ForkJoinPool;
@@ -35,30 +36,45 @@ import org.bragi.collection.CollectionEntry;
 import org.bragi.collection.CollectionInterface;
 import org.bragi.indexer.IndexerInterface;
 import org.bragi.metadata.MetaDataEnum;
-import org.bragi.playlist.PlaylistEntry;
 import org.bragi.query.QueryParserInterface;
+import org.osgi.service.cm.Configuration;
+import org.osgi.service.cm.ConfigurationAdmin;
+import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Modified;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
-
-import aQute.bnd.annotation.metatype.Meta;
 
 /**
  * @author christoph
  *
  */
-@Component()
+@Component(name="org.bragi.LuceneCollection.LuceneCollection")
 public class LuceneCollection implements CollectionInterface {
 	
+	private static final String COLLECTION_ROOTS = "collectionRoots";
+	private static final String COMPONENT_NAME = "org.bragi.LuceneCollection.LuceneCollection";
 	private EventAdmin eventAdmin;
-	//private MetaDataProviderInterface metaDataProvider;
 	private IndexerInterface indexer;
 	private CollectionChangeHandlerThread collectionChangeHandler;
 	private QueryParserInterface queryParser;
+	private ConfigurationAdmin configurationAdmin;
+	private List<String> collectionRoots;
 	
-	public LuceneCollection() throws IOException {
+	@Activate
+	public void activate(Map<String,Object> map) throws IOException {
 		collectionChangeHandler=new CollectionChangeHandlerThread();
+		collectionChangeHandler.setIndexer(indexer);
+		collectionChangeHandler.setEventAdmin(eventAdmin);
+		collectionRoots=new ArrayList<>();
+		modified(map);
+	}
+	
+	@Modified
+	void modified(Map<String,Object> map) {
+		if (map.containsKey(COLLECTION_ROOTS))
+			collectionRoots = (List<String>) map.get(COLLECTION_ROOTS);
 	}
 	
 	@Reference
@@ -72,60 +88,70 @@ public class LuceneCollection implements CollectionInterface {
 	@Reference
 	public void setEventAdmin(EventAdmin pEventAdmin) {
 		eventAdmin=pEventAdmin;
-		collectionChangeHandler.setEventAdmin(pEventAdmin);
+		if (collectionChangeHandler!=null)
+			collectionChangeHandler.setEventAdmin(pEventAdmin);
+		
 	}
 	public void unsetEventAdmin(EventAdmin pEventAdmin) {
-		eventAdmin=null;
-		collectionChangeHandler.setEventAdmin(null);
+		setEventAdmin(null);
+	}
+	
+	@Reference
+	public void setConfigurationAdmin(ConfigurationAdmin pConfigurationAdmin) {
+		configurationAdmin=pConfigurationAdmin;
+	}
+	public void unsetConfigurationAdmin(ConfigurationAdmin pConfigurationAdmin) {
+		configurationAdmin=null;
 	}
 	
 	@Reference(target="(type=CollectionIndexer)")
 	public void setIndexer(IndexerInterface pIndexer) {
 		indexer=pIndexer;
-		collectionChangeHandler.setIndexer(pIndexer);
+		if (collectionChangeHandler!=null)
+			collectionChangeHandler.setIndexer(pIndexer);
 		if (indexer!=null) {
 			try {
-				Map<URI,Map<MetaDataEnum,String>> collectionEntries=indexer.filter("*", MetaDataEnum.TITLE);
-				System.out.println();
-				// (re-)register directories of collection in collectionChangeHandler
-				String[] bla=collectionEntries.entrySet().parallelStream()
-											.map(entry->entry.getKey())
-											.map(Paths::get)
-											.map(path->path.getParent())
-											.filter(path->path!=null)
-											.distinct()
-											.map(Object::toString)
-											.toArray(String[]::new);
-				Path rootPath=Paths.get(commonPath(bla));
-				Files.walk(rootPath, FileVisitOption.FOLLOW_LINKS).filter(path->path.toFile().isDirectory())
-											.forEach(path->{
-												try {
-													collectionChangeHandler.register(path);
-												} catch (Exception e) {
-													System.out.println("collectionChangeHandler.register failed for: "+path.toString());
-												}
-											});
-//				// TODO iterate over all files in all parent directories of collectionEntries and index the ones that are not yet contained in the index
-				//directories.map
-//				collectionEntries.entrySet().parallelStream()
+//				Map<URI,Map<MetaDataEnum,String>> collectionEntries=indexer.filter("*", MetaDataEnum.TITLE);
+//				System.out.println();
+//				// (re-)register directories of collection in collectionChangeHandler
+//				String[] bla=collectionEntries.entrySet().parallelStream()
 //											.map(entry->entry.getKey())
 //											.map(Paths::get)
 //											.map(path->path.getParent())
 //											.filter(path->path!=null)
 //											.distinct()
+//											.map(Object::toString)
+//											.toArray(String[]::new);
+//				Path rootPath=Paths.get(commonPath(bla));
+//				Files.walk(rootPath, FileVisitOption.FOLLOW_LINKS).filter(path->path.toFile().isDirectory())
 //											.forEach(path->{
 //												try {
-//													Files.walk(path,FileVisitOption.FOLLOW_LINKS)
-//														 .filter(path1->!collectionEntries.containsKey(path1.toUri()))
-//														 .map(path1->path1.toUri().toString())
-//														 //.collect(Collectors.toList())
-//														 .forEach(path1->indexer.indexUri(path1));
+//													collectionChangeHandler.register(path);
 //												} catch (Exception e) {
-//													System.out.println("indexer.indexUri failed for: "+path.toString());
+//													System.out.println("collectionChangeHandler.register failed for: "+path.toString());
 //												}
 //											});
-				collectionChangeHandler.setActive(true);
-				collectionChangeHandler.start();
+////				// TODO iterate over all files in all parent directories of collectionEntries and index the ones that are not yet contained in the index
+//				//directories.map
+////				collectionEntries.entrySet().parallelStream()
+////											.map(entry->entry.getKey())
+////											.map(Paths::get)
+////											.map(path->path.getParent())
+////											.filter(path->path!=null)
+////											.distinct()
+////											.forEach(path->{
+////												try {
+////													Files.walk(path,FileVisitOption.FOLLOW_LINKS)
+////														 .filter(path1->!collectionEntries.containsKey(path1.toUri()))
+////														 .map(path1->path1.toUri().toString())
+////														 //.collect(Collectors.toList())
+////														 .forEach(path1->indexer.indexUri(path1));
+////												} catch (Exception e) {
+////													System.out.println("indexer.indexUri failed for: "+path.toString());
+////												}
+////											});
+//				collectionChangeHandler.setActive(true);
+//				collectionChangeHandler.start();
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -164,14 +190,6 @@ public class LuceneCollection implements CollectionInterface {
 		return commonPath;		
 	}
 	
-//	@Reference
-//	public void setMetaDataProvider(MetaDataProviderInterface pMetaDataProvider) {
-//		metaDataProvider=pMetaDataProvider;
-//	}
-//	public void unsetMetaDataProvider(MetaDataProviderInterface pMetaDataProvider) {
-//		metaDataProvider=null;
-//	}
-
 	/* (non-Javadoc)
 	 * @see org.bragi.collection.CollectionInterface#addMedia(java.lang.String)
 	 */
@@ -243,23 +261,25 @@ public class LuceneCollection implements CollectionInterface {
 	        pool.invoke(task);
 	        collectionChangeHandler.setActive(true);
 			collectionChangeHandler.start();
+			collectionRoots.add(uri);
+			createOrUpdateConfiguration();
+		}
+	}
+	
+	/**
+	 * This method is used to either create or update the configuration of the component
+	 */
+	private void createOrUpdateConfiguration() {
+		try {
+			Configuration configuration = configurationAdmin.getConfiguration(COMPONENT_NAME, "?");
+			Hashtable<String, Object> map = new Hashtable<>();
+			map.put(COLLECTION_ROOTS, collectionRoots);
+			configuration.update(map);
+		} catch (IOException ioe) {
+			ioe.printStackTrace();
 		}
 	}
 
-	@Override
-	public List<CollectionEntry> filter(String query,
-			MetaDataEnum... metaData) {
-		List<CollectionEntry> result=new ArrayList<>();
-		if (indexer!=null) {
-			try {
-				result=indexer.filter(query, metaData).entrySet().stream().map(LuceneCollection::createCollectionEntry).collect(Collectors.toList());
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		}
-		return result;
-	}
-	
 	public static CollectionEntry createCollectionEntry(Map.Entry<URI, Map<MetaDataEnum, String>> entry) {
 		CollectionEntry collectionEntry=new CollectionEntry();
 		collectionEntry.setUri(entry.getKey());
@@ -270,9 +290,8 @@ public class LuceneCollection implements CollectionInterface {
 	@Override
 	public List<CollectionEntry> filter(String query) {
 		List<CollectionEntry> returnValue=new ArrayList<>();
-		if ((query!=null) && (queryParser!=null)) {
-			MetaDataEnum[] metaDataValues=new MetaDataEnum[]{};
-			metaDataValues=EnumSet.allOf(MetaDataEnum.class).toArray(metaDataValues);
+		if ((query!=null) && (queryParser!=null) && (indexer!=null)) {
+			MetaDataEnum[] metaDataValues=MetaDataEnum.values();
 			try {
 				Map<URI,Map<MetaDataEnum,String>> collectionMetaData=indexer.filter("*", metaDataValues);
 				collectionMetaData=queryParser.execute(query, collectionMetaData);

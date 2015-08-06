@@ -24,13 +24,15 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 
-import junit.framework.Assert;
-
 import org.bragi.collection.CollectionEntry;
 import org.bragi.indexer.IndexerInterface;
 import org.bragi.metadata.MetaDataEnum;
+import org.bragi.query.QueryParserInterface;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.osgi.service.cm.Configuration;
+import org.osgi.service.cm.ConfigurationAdmin;
 import org.osgi.service.event.EventAdmin;
 
 /**
@@ -39,23 +41,31 @@ import org.osgi.service.event.EventAdmin;
  */
 public class LuceneCollectionTest {
 	
-	private static String QUERY = MetaDataEnum.ARTIST.name()+":\"Kataklysm\"";
+	private static String QUERY = " SELECT * WHERE "+MetaDataEnum.ALBUM.name()+"='Kataklysm'";
 	
 	private IndexerInterface indexer;
 	private LuceneCollection collection;
-	private EventAdmin admin;
+	private EventAdmin eventAdmin;
+	private ConfigurationAdmin configAdmin;
+	private QueryParserInterface queryParser;
 
 	@Before
 	public void initTest() throws Exception {
 		indexer = mock(IndexerInterface.class);
-		admin = mock(EventAdmin.class);
+		eventAdmin = mock(EventAdmin.class);
+		configAdmin = mock(ConfigurationAdmin.class);
+		Configuration config = mock(Configuration.class);
+		queryParser = mock(QueryParserInterface.class);
 		collection=new LuceneCollection();
 		collection.setIndexer(indexer);
-		collection.setEventAdmin(admin);
+		collection.setEventAdmin(eventAdmin);
+		collection.setConfigurationAdmin(configAdmin);
+		collection.setQueryParser(queryParser);
+		when(configAdmin.getConfiguration("org.bragi.LuceneCollection.LuceneCollection", "?")).thenReturn(config);
 	}
 	
 	@Test
-	public void addCollectionRootTest() throws URISyntaxException {
+	public void addCollectionRootTest() throws URISyntaxException, IOException {
 		String root = LuceneCollectionTest.class.getClassLoader().getResource("a").toURI().toString();
 		final List<URI> files=new ArrayList<>();
         try {
@@ -74,6 +84,7 @@ public class LuceneCollectionTest {
 			e.printStackTrace();
 		}
         //test regular case
+        collection.activate(new Hashtable<>());
 		collection.addCollectionRoot(root);
 		for (URI file : files) {
 			verify(indexer,times(1)).indexUri(file.toString());
@@ -117,25 +128,28 @@ public class LuceneCollectionTest {
 	
 	@Test
 	public void filterTest() throws Exception {
-		String file1 = LuceneCollectionTest.class.getClassLoader().getResource("a/b/test.mp3").toURI().toString();
-		String file2 = LuceneCollectionTest.class.getClassLoader().getResource("a/b/c/test.ogg").toURI().toString();
-		String query = MetaDataEnum.ARTIST.name()+":\"Kataklysm\"";
+		String query = "SELECT * WHERE "+ MetaDataEnum.ARTIST.name()+"='Kataklysm'";
 		Map<URI,Map<MetaDataEnum, String>> retValue = new Hashtable<>();
 		retValue.put(URI.create("1"), new Hashtable<MetaDataEnum, String>());
 		retValue.put(URI.create("2"), new Hashtable<MetaDataEnum, String>());
-		when(indexer.filter(query,MetaDataEnum.values())).thenReturn(retValue);
-		when(indexer.filter(query,new MetaDataEnum[]{})).thenReturn(new Hashtable<>());
+		when(indexer.filter("*",MetaDataEnum.values())).thenReturn(retValue);
+		when(indexer.filter("*",new MetaDataEnum[]{})).thenReturn(new Hashtable<>());
 		when(indexer.filter("")).thenReturn(new Hashtable<>());
 		when(indexer.filter(null)).thenReturn(new Hashtable<>());
-		List<CollectionEntry> filtered=collection.filter(query,MetaDataEnum.values());
+		when(queryParser.execute(query, retValue)).thenReturn(retValue);
+		List<CollectionEntry> filtered=collection.filter(query);
 		Assert.assertEquals(2, filtered.size());
-		filtered=collection.filter(QUERY, new MetaDataEnum[]{});
+		filtered=collection.filter(QUERY);
 		Assert.assertEquals(0, filtered.size());
 		filtered=collection.filter("");
 		Assert.assertEquals(0, filtered.size());
 		filtered=collection.filter(null);
 		Assert.assertEquals(0, filtered.size());
 		collection.setIndexer(null);
+		filtered=collection.filter(QUERY);
+		Assert.assertEquals(0, filtered.size());
+		collection.setIndexer(indexer);
+		collection.setQueryParser(null);
 		filtered=collection.filter(QUERY);
 		Assert.assertEquals(0, filtered.size());
 	}

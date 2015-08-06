@@ -32,6 +32,5 @@ public interface CollectionInterface {
 	public void addMedia(String uri) throws URISyntaxException;
 	public void addCollectionRoot(String uri) throws URISyntaxException;
 	public void removeMedia(String uri);
-	public List<CollectionEntry> filter(String query, MetaDataEnum... metaData);
 	public List<CollectionEntry> filter(String query);
 }
