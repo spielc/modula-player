@@ -19,6 +19,8 @@ import org.bragi.engine.EngineInterface;
 import org.bragi.engine.vlc.internal.URIParser;
 import org.bragi.engine.vlc.internal.VLCMediaPlayerComponent;
 import org.bragi.playlist.PlaylistInterface;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
 import org.osgi.service.event.EventHandler;
@@ -26,12 +28,13 @@ import org.osgi.service.event.EventHandler;
 import uk.co.caprica.vlcj.binding.LibVlcConst;
 import uk.co.caprica.vlcj.medialist.MediaListItem;
 import uk.co.caprica.vlcj.player.list.MediaListPlayer;
+import uk.co.caprica.vlcj.player.list.MediaListPlayerMode;
 
 /**
  * @author christoph
  *
  */
-@org.osgi.service.component.annotations.Component(property="event.topics=org/bragi/playlist/event/*")
+@Component(property="event.topics=org/bragi/playlist/event/*")
 public class VLCEngine implements EngineInterface, EventHandler {
 	
 	private VLCMediaPlayerComponent playerComponent;
@@ -44,10 +47,10 @@ public class VLCEngine implements EngineInterface, EventHandler {
 		playerComponent=new VLCMediaPlayerComponent();
 		player=playerComponent.getMediaListPlayer();
 		player.setMediaPlayer(playerComponent.getMediaPlayer());
-		currentIndex=-1;
+		currentIndex=0;
 	}
 	
-	@org.osgi.service.component.annotations.Reference
+	@Reference
 	public void setEventAdmin(EventAdmin pEventAdmin) {
 		eventAdmin=pEventAdmin;
 		playerComponent.setEventAdmin(eventAdmin);
@@ -63,12 +66,14 @@ public class VLCEngine implements EngineInterface, EventHandler {
 	@Override
 	public void play(int itemIndex) {
 		if (player!=null) {
+			playerComponent.play(itemIndex);
 			if (itemIndex!=currentIndex)
 				player.playItem(itemIndex);
 			else
 				player.play();
 //			postNavigateEvents(currentIndex, itemIndex);
 			currentIndex=itemIndex;
+			
 			//playerComponent.postEvent(new Event(EngineInterface.PLAY_EVENT,(Map<String,Object>)null));
 		}
 	}
@@ -100,6 +105,7 @@ public class VLCEngine implements EngineInterface, EventHandler {
 	public void forward() {
 		if (player!=null) {
 			//currentIndex++;
+			playerComponent.forward();
 			player.playNext();
 //			postNavigateEvents(currentIndex, ++currentIndex);
 			//playerComponent.postEvent(new Event(EngineInterface.FORWARD_EVENT,(Map<String,Object>)null));
@@ -110,6 +116,7 @@ public class VLCEngine implements EngineInterface, EventHandler {
 	public void backward() {
 		if (player!=null) {
 			//currentIndex--;
+			playerComponent.backward();
 			player.playPrevious();
 //			postNavigateEvents(currentIndex, --currentIndex);
 			//playerComponent.postEvent(new Event(EngineInterface.BACKWARD_EVENT,(Map<String,Object>)null));
@@ -149,35 +156,84 @@ public class VLCEngine implements EngineInterface, EventHandler {
 	
 	@Override
 	public void handleEvent(Event event) {
-		URI uri=(URI)event.getProperty(PlaylistInterface.URI_EVENTDATA);
-		if (uri!=null) {
-			try {
-				String uriString=URIParser.getMrl(uri.toString()).value();
-				int index=0;
-				switch (event.getTopic()) {
-				case PlaylistInterface.ADD_EVENT:
-					playerComponent.getMediaList().addMedia(uriString);
-					System.out.println(uriString+" added!!");
-					break;
-				case PlaylistInterface.INSERT_EVENT:
-					index=(int)event.getProperty(PlaylistInterface.INDEX_EVENTDATA);
-					playerComponent.getMediaList().insertMedia(index, uriString);
-					break;
-				case PlaylistInterface.REMOVE_EVENT:
-					List<MediaListItem> items = playerComponent.getMediaList().items();
-					for (MediaListItem item : items) {
-						if (item.mrl().equals(uriString)) 
-							break;
-						index++;
-					}
-					if (index!=items.size())
-						playerComponent.getMediaList().removeMedia(index);
-					break;
+		if (event.containsProperty(PlaylistInterface.URI_EVENTDATA)) 
+			handleEventWithUriEventData(event);
+		else if (event.containsProperty(PlaylistInterface.BOOLEAN_EVENTDATA))
+			handleEventWithBooleanEventData(event);
+//		if (event.containsProperty(PlaylistInterface.URI_EVENTDATA)) {
+//			try {
+//				URI uri=(URI)event.getProperty(PlaylistInterface.URI_EVENTDATA);
+//				String uriString=URIParser.getMrl(uri.toString()).value();
+//				int index=0;
+//				switch (event.getTopic()) {
+//				case PlaylistInterface.ADD_EVENT:
+//					playerComponent.getMediaList().addMedia(uriString);
+//					System.out.println(uriString+" added!!");
+//					break;
+//				case PlaylistInterface.INSERT_EVENT:
+//					index=(int)event.getProperty(PlaylistInterface.INDEX_EVENTDATA);
+//					playerComponent.getMediaList().insertMedia(index, uriString);
+//					break;
+//				case PlaylistInterface.REMOVE_EVENT:
+//					List<MediaListItem> items = playerComponent.getMediaList().items();
+//					for (MediaListItem item : items) {
+//						if (item.mrl().equals(uriString)) 
+//							break;
+//						index++;
+//					}
+//					if (index!=items.size())
+//						playerComponent.getMediaList().removeMedia(index);
+//					break;
+//				}
+//			} catch (URISyntaxException e) {
+//				e.printStackTrace();
+//			}
+//		}
+//		player.setMediaList(playerComponent.getMediaList());
+	}
+	
+	private void handleEventWithUriEventData(Event event) {
+		try {
+			URI uri=(URI)event.getProperty(PlaylistInterface.URI_EVENTDATA);
+			String uriString=URIParser.getMrl(uri.toString()).value();
+			int index=0;
+			switch (event.getTopic()) {
+			case PlaylistInterface.ADD_EVENT:
+				playerComponent.getMediaList().addMedia(uriString);
+				System.out.println(uriString+" added!!");
+				break;
+			case PlaylistInterface.INSERT_EVENT:
+				index=(int)event.getProperty(PlaylistInterface.INDEX_EVENTDATA);
+				playerComponent.getMediaList().insertMedia(index, uriString);
+				break;
+			case PlaylistInterface.REMOVE_EVENT:
+				List<MediaListItem> items = playerComponent.getMediaList().items();
+				for (MediaListItem item : items) {
+					if (item.mrl().equals(uriString)) 
+						break;
+					index++;
 				}
-			} catch (URISyntaxException e) {
-				e.printStackTrace();
+				if (index!=items.size())
+					playerComponent.getMediaList().removeMedia(index);
+				break;
 			}
+		} catch (URISyntaxException e) {
+			e.printStackTrace();
 		}
 		player.setMediaList(playerComponent.getMediaList());
+	}
+	
+	private void handleEventWithBooleanEventData(Event event) {
+		boolean value=(boolean)event.getProperty(PlaylistInterface.BOOLEAN_EVENTDATA);
+		switch(event.getTopic()) {
+		case PlaylistInterface.RANDOM_CHANGED_EVENT:
+			break;
+		case PlaylistInterface.REPEAT_CHANGED_EVENT:
+			if (value)
+				playerComponent.getMediaListPlayer().setMode(MediaListPlayerMode.LOOP);
+			else
+				playerComponent.getMediaListPlayer().setMode(MediaListPlayerMode.DEFAULT);
+			break;
+		}
 	}
 }

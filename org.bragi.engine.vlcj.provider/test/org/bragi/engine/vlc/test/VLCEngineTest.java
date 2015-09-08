@@ -115,9 +115,10 @@ public class VLCEngineTest {
 			engine.handleEvent(addEvent);
 			engine.play(1);
 			Thread.sleep(500);
-			engine.backward();
-			Thread.sleep(1000);
 			HashMap<String, Object> eventProperties = new HashMap<>();
+			engine.backward();
+			Thread.sleep(500);
+			eventProperties.clear();
 			eventProperties.put(EngineInterface.CURRENT_INDEX, 0);
 			verify(admin,times(1)).postEvent(new Event(EngineInterface.BACKWARD_EVENT,eventProperties));
 		} catch (InterruptedException ie) {

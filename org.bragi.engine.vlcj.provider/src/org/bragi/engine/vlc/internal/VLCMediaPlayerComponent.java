@@ -12,6 +12,7 @@
 package org.bragi.engine.vlc.internal;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.bragi.engine.EngineInterface;
@@ -20,7 +21,6 @@ import org.osgi.service.event.EventAdmin;
 
 import uk.co.caprica.vlcj.binding.internal.libvlc_media_t;
 import uk.co.caprica.vlcj.component.AudioMediaListPlayerComponent;
-import uk.co.caprica.vlcj.medialist.MediaList;
 import uk.co.caprica.vlcj.medialist.MediaListItem;
 import uk.co.caprica.vlcj.player.MediaPlayer;
 import uk.co.caprica.vlcj.player.list.MediaListPlayer;
@@ -29,10 +29,14 @@ public class VLCMediaPlayerComponent extends AudioMediaListPlayerComponent {
 
 	private EventAdmin eventAdmin;
 	private String lastMrl;
+	private int currentIndex;
+	private boolean isDirectionForward;
 		
 	public VLCMediaPlayerComponent() {
 		super();
 		lastMrl="";
+		currentIndex=-1;
+		isDirectionForward=false;
 	}
 	
 	public void setEventAdmin(EventAdmin pEventAdmin) {
@@ -65,6 +69,7 @@ public class VLCMediaPlayerComponent extends AudioMediaListPlayerComponent {
 ////				currentIndex=items.size()-counter-1;
 ////			if((lastIndex>=0) && (currentIndex>=0))
 ////				break;
+	
 ////			counter++;
 ////		}
 //		for (MediaListItem mediaListItem : mediaList.items()) {
@@ -85,26 +90,22 @@ public class VLCMediaPlayerComponent extends AudioMediaListPlayerComponent {
 
 	@Override
 	public void nextItem(MediaListPlayer mediaListPlayer, libvlc_media_t item, String itemMrl) {
-		if (lastMrl.isEmpty())
-			lastMrl=itemMrl;
-		MediaList mediaList=mediaListPlayer.getMediaList();
-		int lastIndex=-1;
-		int currentIndex=-1;
-		int counter=0;
-		for (MediaListItem mediaListItem : mediaList.items()) {
-			if (mediaListItem.mrl().equals(lastMrl)) {
-				lastIndex=counter;
-				lastMrl=null;
-			}
-			else if (mediaListItem.mrl().equals(itemMrl))
-				currentIndex=counter;
-			if((lastIndex>=0) && (currentIndex>=0))
+		// TODO rewrite this method using the lastIndex, direction and itemMrl
+		int newIndex=currentIndex+1;
+		if (!isDirectionForward)
+			newIndex=currentIndex-1;
+		int lastIndex=currentIndex;
+		currentIndex=newIndex;
+		List<MediaListItem> mediaListItems=mediaListPlayer.getMediaList().items();
+		int i=0;
+		for (MediaListItem mediaListItem : mediaListItems) {
+			if(mediaListItem.mrl().equals(itemMrl))
 				break;
-			counter++;
+			i++;
 		}
 		postNavigateEvents(lastIndex, currentIndex);
-		if (lastIndex!=currentIndex)
-			lastMrl=itemMrl;
+		if (!isDirectionForward)
+			isDirectionForward=true;
 	}
 
 	@Override
@@ -133,24 +134,31 @@ public class VLCMediaPlayerComponent extends AudioMediaListPlayerComponent {
 		System.out.println("error occured");
 	}
 	
-	
-	
-	@Override
-	public void backward(MediaPlayer mediaPlayer) {
+	public void backward() {
 		System.out.println("backward");
+		isDirectionForward=false;
 	}
-
-	@Override
-	public void forward(MediaPlayer mediaPlayer) {
+	
+	public void forward() {
 		System.out.println("forward");
+		isDirectionForward=true;
 	}
-
+	
 	/**
 	 * Post the event to the evantad
 	 */
 	public void postEvent(Event event) {
 		if (eventAdmin!=null)
 			eventAdmin.postEvent(event);
+	}
+	
+	public void play(int pCurrentIndex) {
+		isDirectionForward=(currentIndex<=pCurrentIndex);
+		currentIndex = pCurrentIndex;
+		if (isDirectionForward)
+			currentIndex--;
+		else
+			currentIndex++;
 	}
 	
 	/**
@@ -168,6 +176,7 @@ public class VLCMediaPlayerComponent extends AudioMediaListPlayerComponent {
 			event=new Event(EngineInterface.FORWARD_EVENT,eventProperties);
 		else if (lastIndex>currentIndex)
 			event=new Event(EngineInterface.BACKWARD_EVENT,eventProperties);
-		postEvent(event);
+		if (event!=null)			
+			postEvent(event);
 	}
 }
