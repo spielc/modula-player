@@ -42,6 +42,7 @@ public class SimpleFSBasedLuceneIndexer extends AbstractLuceneIndexer implements
 		super();
 	}
 	
+	@Override
 	@Modified
 	public void modified(Map<String,Object> props) {
 		try {
@@ -53,6 +54,7 @@ public class SimpleFSBasedLuceneIndexer extends AbstractLuceneIndexer implements
 		}
 	}
 	
+	@Override
 	@org.osgi.service.component.annotations.Reference
 	public void setMetaDataProvider(MetaDataProviderInterface pMetaDataProvider) {
 		if (indexer!=null)
@@ -61,6 +63,7 @@ public class SimpleFSBasedLuceneIndexer extends AbstractLuceneIndexer implements
 		
 	}
 
+	@Override
 	public void unsetMetaDataProvider(MetaDataProviderInterface pMetaDataProvider) {
 		setMetaDataProvider(null);
 	}

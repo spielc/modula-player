@@ -27,10 +27,6 @@ public abstract class AbstractLuceneIndexer {
 	protected LuceneIndexer indexer;
 	protected MetaDataProviderInterface metaDataProvider;
 
-	public AbstractLuceneIndexer() {
-		super();
-	}
-
 	@Activate
 	public void activate(Map<String,Object> props) {
 		modified(props);
