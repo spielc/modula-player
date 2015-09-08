@@ -177,6 +177,8 @@ public class Playlist implements PlaylistInterface {
 			isRandomized = (boolean) map.get(RANDOM);
 		if (map.containsKey(REPEAT))
 			isRepeated = (boolean) map.get(REPEAT);
+		postBooleanEvent(isRandomized, PlaylistInterface.RANDOM_CHANGED_EVENT);
+		postBooleanEvent(isRepeated, PlaylistInterface.REPEAT_CHANGED_EVENT);
 	}
 	
 	/* (non-Javadoc)
@@ -324,7 +326,7 @@ public class Playlist implements PlaylistInterface {
 	}
 
 	/**
-	 * Post a new event to the EventAdmin-service
+	 * Post a new event of type eventType to the EventAdmin-service
 	 * @param uriObject, the URI-object of the object
 	 * @param eventType, the type of the event
 	 */
@@ -333,6 +335,17 @@ public class Playlist implements PlaylistInterface {
 			HashMap<String,URI> eventData=new HashMap<>();
 			eventData.put(URI_EVENTDATA, uriObject);
 			eventAdmin.postEvent(new Event(eventType,eventData));
+		}
+	}
+	
+	/**
+	 * 
+	 */
+	private void postBooleanEvent(boolean value, String eventType) {
+		if (eventAdmin!=null) {
+			HashMap<String,Boolean> eventData=new HashMap<>();
+			eventData.put(PlaylistInterface.BOOLEAN_EVENTDATA, value);
+			eventAdmin.postEvent(new Event(eventType, eventData));
 		}
 	}
 	

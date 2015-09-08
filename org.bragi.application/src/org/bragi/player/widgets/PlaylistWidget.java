@@ -46,6 +46,8 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Menu;
+import org.eclipse.swt.widgets.MenuItem;
 import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableColumn;
 
@@ -59,6 +61,8 @@ public class PlaylistWidget extends Composite {
 	private UriDropAdapter dropAdapter;
 	private EngineInterface engine;
 	private UriDragListener dragListener;
+	private MenuItem mntmRepeat;
+	private MenuItem mntmRandom;
 	
 	private class PlaylistTableLabelProvider extends ColumnLabelProvider implements ITableLabelProvider {
 		
@@ -124,6 +128,35 @@ public class PlaylistWidget extends Composite {
 	    playlistTableViewer.addDragSupport(operations, transferTypes, dragListener);
 	    playlistTable = playlistTableViewer.getTable();
 		playlistTable.setHeaderVisible(true);
+		
+		Menu menu = new Menu(playlistTable);
+		playlistTable.setMenu(menu);
+		
+		MenuItem mntmPlaylist = new MenuItem(menu, SWT.CASCADE);
+		mntmPlaylist.setText("Playlist");
+		
+		Menu menu_1 = new Menu(mntmPlaylist);
+		mntmPlaylist.setMenu(menu_1);
+		
+		MenuItem mntmShuffle = new MenuItem(menu_1, SWT.NONE);
+		mntmShuffle.setText("Shuffle");
+		mntmShuffle.addListener(SWT.Selection, event -> {
+			playlist.shuffle();
+			playlistTableViewer.refresh();
+		});
+		
+		mntmRepeat = new MenuItem(menu_1, SWT.CHECK);
+		mntmRepeat.setText("Repeat");
+		mntmRepeat.addListener(SWT.Selection, event -> {
+			playlist.setRepeat(mntmRepeat.getSelection());
+		});
+		
+		mntmRandom = new MenuItem(menu_1, SWT.CHECK);
+		mntmRandom.setText("Random");
+		mntmRandom.addListener(SWT.Selection, event -> {
+			playlist.setRandom(mntmRandom.getSelection());
+		});
+		
 		for (MetaDataEnum metaData : EnumSet.of(MetaDataEnum.TITLE, MetaDataEnum.ARTIST, MetaDataEnum.ALBUM)) {
 			TableViewerColumn tableViewerColumn = new TableViewerColumn(playlistTableViewer, SWT.NONE);
 			TableColumn tblclmnExamplecolumn = tableViewerColumn.getColumn();
@@ -165,6 +198,10 @@ public class PlaylistWidget extends Composite {
 		playlist=pPlaylist;
 		playlistTableViewer.setInput(pPlaylist);
 		playlistTableViewer.refresh();
+		if (playlist!=null) {
+			mntmRepeat.setSelection(playlist.getRepeat());
+			mntmRandom.setSelection(playlist.getRandom());
+		}
 	}
 	
 	public void setEngine(EngineInterface pEngine) {
@@ -214,5 +251,4 @@ public class PlaylistWidget extends Composite {
 		playlistTableViewer.refresh();
 		return retValue;
 	}
-	
 }
