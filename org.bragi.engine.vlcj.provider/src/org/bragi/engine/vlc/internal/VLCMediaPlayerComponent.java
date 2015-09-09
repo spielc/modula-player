@@ -28,13 +28,11 @@ import uk.co.caprica.vlcj.player.list.MediaListPlayer;
 public class VLCMediaPlayerComponent extends AudioMediaListPlayerComponent {
 
 	private EventAdmin eventAdmin;
-	private String lastMrl;
 	private int currentIndex;
 	private boolean isDirectionForward;
 		
 	public VLCMediaPlayerComponent() {
 		super();
-		lastMrl="";
 		currentIndex=-1;
 		isDirectionForward=false;
 	}
@@ -51,58 +49,14 @@ public class VLCMediaPlayerComponent extends AudioMediaListPlayerComponent {
 		postEvent(new Event(EngineInterface.FINISHED_EVENT,(Map<String,Object>)null));
 	}
 
-	
-	
-//	@Override
-//	public void nextItem(MediaListPlayer mediaListPlayer, libvlc_media_t item,	String itemMrl) {
-//		if (lastMrl.isEmpty())
-//			lastMrl=itemMrl;
-//		MediaList mediaList=mediaListPlayer.getMediaList();
-//		int lastIndex=-1;
-//		int currentIndex=-1;
-//		int counter=0;
-////		List<MediaListItem> items=mediaList.items();
-////		while(counter<=items.size()/2) {
-////			if(items.get(counter).mrl().equals(lastMrl))
-////				lastIndex=counter;
-////			if(items.get(items.size()-counter-1).mrl().equals(itemMrl))
-////				currentIndex=items.size()-counter-1;
-////			if((lastIndex>=0) && (currentIndex>=0))
-////				break;
-	
-////			counter++;
-////		}
-//		for (MediaListItem mediaListItem : mediaList.items()) {
-//			if (mediaListItem.mrl().equals(lastMrl)) {
-//				lastIndex=counter;
-//				lastMrl=null;
-//			}
-//			else if (mediaListItem.mrl().equals(itemMrl))
-//				currentIndex=counter;
-//			if((lastIndex>=0) && (currentIndex>=0))
-//				break;
-//			counter++;
-//		}
-//		postNavigateEvents(lastIndex, currentIndex);
-//		if (lastIndex!=currentIndex)
-//			lastMrl=itemMrl;
-//	}
-
 	@Override
 	public void nextItem(MediaListPlayer mediaListPlayer, libvlc_media_t item, String itemMrl) {
-		// TODO rewrite this method using the lastIndex, direction and itemMrl
+		List<MediaListItem> mediaListItems=mediaListPlayer.getMediaList().items();
 		int newIndex=currentIndex+1;
 		if (!isDirectionForward)
 			newIndex=currentIndex-1;
 		int lastIndex=currentIndex;
-		currentIndex=newIndex;
-		List<MediaListItem> mediaListItems=mediaListPlayer.getMediaList().items();
-		int i=0;
-		for (MediaListItem mediaListItem : mediaListItems) {
-			if(mediaListItem.mrl().equals(itemMrl))
-				break;
-			i++;
-		}
+		currentIndex=(newIndex%mediaListItems.size());
 		postNavigateEvents(lastIndex, currentIndex);
 		if (!isDirectionForward)
 			isDirectionForward=true;
