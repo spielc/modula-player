@@ -33,12 +33,14 @@ public class RAMBasedLuceneIndexer extends AbstractLuceneIndexer implements Inde
 		super();
 	}
 	
+	@Override
 	@Modified
 	public void modified(Map<String,Object> map) {
 		indexer=new LuceneIndexer(new RAMDirectory());
 		indexer.setMetaDataProvider(metaDataProvider);
 	}
 	
+	@Override
 	@org.osgi.service.component.annotations.Reference
 	public void setMetaDataProvider(MetaDataProviderInterface pMetaDataProvider) {
 		if (indexer!=null)
@@ -47,6 +49,7 @@ public class RAMBasedLuceneIndexer extends AbstractLuceneIndexer implements Inde
 		
 	}
 
+	@Override
 	public void unsetMetaDataProvider(MetaDataProviderInterface pMetaDataProvider) {
 		setMetaDataProvider(null);
 	}

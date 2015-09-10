@@ -23,9 +23,12 @@ public interface PlaylistInterface {
 	public static final String ADD_EVENT = "org/bragi/playlist/event/ADDED";
 	public static final String REMOVE_EVENT = "org/bragi/playlist/event/REMOVED";
 	public static final String INSERT_EVENT = "org/bragi/playlist/event/INSERTED";
+	public static final String RANDOM_CHANGED_EVENT = "org/bragi/playlist/event/RANDOM_CHANGED";
+	public static final String REPEAT_CHANGED_EVENT = "org/bragi/playlist/event/REPEAT_CHANGED";
 	//various other constants
 	public static final String URI_EVENTDATA = "org/bragi/playlist/eventData/URI";
 	public static final String INDEX_EVENTDATA = "org/bragi/playlist/eventData/INDEX";
+	public static final String BOOLEAN_EVENTDATA = "org/bragi/playlist/eventData/BOOLEAN";
 	//methods for working with playlists
 	public void addMedia(String uri) throws URISyntaxException;
 	public void removeMedia(int index);
