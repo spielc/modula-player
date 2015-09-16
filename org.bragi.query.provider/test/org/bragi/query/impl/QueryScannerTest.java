@@ -6,7 +6,6 @@ package org.bragi.query.impl;
 import org.bragi.query.QueryKeywords;
 import org.bragi.query.Token;
 import org.bragi.query.TokenType;
-import org.bragi.query.impl.QueryScanner;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -88,6 +87,7 @@ public class QueryScannerTest {
 		QueryScanner scanner=new QueryScanner(QueryKeywords.ORDER_DIRECTION_ASC);
 		Token token=scanner.scan();
 		Assert.assertEquals(TokenType.ORDER_DIRECTION, token.getType());
+		Assert.assertEquals(QueryKeywords.ORDER_DIRECTION_ASC, token.getValue());
 		token=scanner.scan();
 		Assert.assertEquals(TokenType.NONE, token.getType());
 	}
@@ -97,6 +97,7 @@ public class QueryScannerTest {
 		QueryScanner scanner=new QueryScanner(QueryKeywords.ORDER_DIRECTION_DESC);
 		Token token=scanner.scan();
 		Assert.assertEquals(TokenType.ORDER_DIRECTION, token.getType());
+		Assert.assertEquals(QueryKeywords.ORDER_DIRECTION_DESC, token.getValue());
 		token=scanner.scan();
 		Assert.assertEquals(TokenType.NONE, token.getType());
 	}
@@ -258,6 +259,49 @@ public class QueryScannerTest {
 		token=scanner.scan();
 		Assert.assertEquals(TokenType.STRING, token.getType());
 		Assert.assertEquals("Runes", token.getValue());
+		token=scanner.scan();
+		Assert.assertEquals(TokenType.NONE, token.getType());
+	}
+	
+	@Test
+	public void scanQueryMultipleColumnsWithWhereAndOrderByTest() {
+		QueryScanner scanner=new QueryScanner("SELECT ALBUM,TITLE,ARTIST WHERE RATING>2000 ORDER BY TITLE DESC");
+		Token token=scanner.scan();
+		Assert.assertEquals(TokenType.SELECT, token.getType());
+		token=scanner.scan();
+		Assert.assertEquals(TokenType.COLUMN_NAME, token.getType());
+		Assert.assertEquals("ALBUM", token.getValue());
+		token=scanner.scan();
+		Assert.assertEquals(TokenType.COMMA, token.getType());
+		token=scanner.scan();
+		Assert.assertEquals(TokenType.COLUMN_NAME, token.getType());
+		Assert.assertEquals("TITLE", token.getValue());
+		token=scanner.scan();
+		Assert.assertEquals(TokenType.COMMA, token.getType());
+		token=scanner.scan();
+		Assert.assertEquals(TokenType.COLUMN_NAME, token.getType());
+		Assert.assertEquals("ARTIST", token.getValue());
+		token=scanner.scan();
+		Assert.assertEquals(TokenType.WHERE, token.getType());
+		token=scanner.scan();
+		Assert.assertEquals(TokenType.COLUMN_NAME, token.getType());
+		Assert.assertEquals("RATING", token.getValue());
+		token=scanner.scan();
+		Assert.assertEquals(TokenType.OPERATOR, token.getType());
+		Assert.assertEquals(">", token.getValue());
+		token=scanner.scan();
+		Assert.assertEquals(TokenType.NUMBER, token.getType());
+		Assert.assertEquals("2000", token.getValue());
+		token=scanner.scan();
+		Assert.assertEquals(TokenType.ORDER, token.getType());
+		token=scanner.scan();
+		Assert.assertEquals(TokenType.BY, token.getType());
+		token=scanner.scan();
+		Assert.assertEquals(TokenType.COLUMN_NAME, token.getType());
+		Assert.assertEquals("TITLE", token.getValue());
+		token=scanner.scan();
+		Assert.assertEquals(TokenType.ORDER_DIRECTION, token.getType());
+		Assert.assertEquals(QueryKeywords.ORDER_DIRECTION_DESC, token.getValue());
 		token=scanner.scan();
 		Assert.assertEquals(TokenType.NONE, token.getType());
 	}

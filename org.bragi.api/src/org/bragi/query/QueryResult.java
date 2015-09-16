@@ -1,0 +1,60 @@
+/**
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option) any
+ * later version. This program is distributed in the hope that it will be
+ * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
+ * Public License for more details. You should have received a copy of the GNU
+ * Lesser General Public License along with this program. If not, see
+ * <http://www.gnu.org/licenses/>
+ */
+package org.bragi.query;
+
+import java.net.URI;
+import java.util.Map;
+
+import org.bragi.metadata.MetaDataEnum;
+import org.bragi.playlist.PlaylistEntry;
+
+/**
+ * @author christoph
+ *
+ */
+public class QueryResult {
+	private URI uri;
+	private Map<MetaDataEnum,String> metaData;
+	
+	public QueryResult() {
+		uri=null;
+		metaData=null;
+	}
+
+	public URI getUri() {
+		return uri;
+	}
+
+	public void setUri(URI uri) {
+		this.uri = uri;
+	}
+
+	public Map<MetaDataEnum, String> getMetaData() {
+		return metaData;
+	}
+
+	public void setMetaData(Map<MetaDataEnum, String> metaData) {
+		this.metaData = metaData;
+	}
+
+	@Override
+	public boolean equals(Object other) {
+		if (other==null || !(other instanceof PlaylistEntry))
+			return false;
+		return uri.equals(((QueryResult)other).uri);
+	}
+
+	@Override
+	public int hashCode() {
+		return uri.hashCode();
+	}
+}

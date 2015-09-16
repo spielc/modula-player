@@ -6,10 +6,12 @@ package org.bragi.query.impl;
 import java.net.URI;
 import java.util.EnumSet;
 import java.util.Hashtable;
+import java.util.List;
 import java.util.Map;
 
 import org.bragi.metadata.MetaDataEnum;
 import org.bragi.query.ParseException;
+import org.bragi.query.QueryResult;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -86,27 +88,43 @@ public class QueryParserTest {
 	}
 	
 	@Test
+	public void testParseSelectAllOrderByAscendingTest() throws ParseException {
+		QueryParser parser=new QueryParser();
+		List<QueryResult> result=parser.execute("SELECT * ORDER BY ARTIST ASC", metaData);
+		Assert.assertEquals(3, result.size());
+		Assert.assertEquals("Eluveitie", result.get(0).getMetaData().get(MetaDataEnum.ARTIST));
+	}
+	
+	@Test
+	public void testParseSelectAllOrderByDescendingTest() throws ParseException {
+		QueryParser parser=new QueryParser();
+		List<QueryResult> result=parser.execute("SELECT * ORDER BY ARTIST DESC", metaData);
+		Assert.assertEquals(3, result.size());
+		Assert.assertEquals("Eluveitie", result.get(2).getMetaData().get(MetaDataEnum.ARTIST));
+	}
+	
+	@Test
 	public void testParseSelectAllTest() throws ParseException {
 		QueryParser parser=new QueryParser();
-		Map<URI,Map<MetaDataEnum,String>> result=parser.execute("SELECT *", metaData);
+		List<QueryResult> result=parser.execute("SELECT *", metaData);
 		Assert.assertEquals(3, result.size());
-		result.forEach((key,value)->Assert.assertEquals(EnumSet.allOf(MetaDataEnum.class).size(), value.keySet().size()));
+		result.forEach(res->Assert.assertEquals(EnumSet.allOf(MetaDataEnum.class).size(), res.getMetaData().size()));
 	}
 	
 	@Test
 	public void testParseColumnSpecifierTest() throws ParseException {
 		QueryParser parser=new QueryParser();
-		Map<URI,Map<MetaDataEnum,String>> result=parser.execute("SELECT ALBUM", metaData);
+		List<QueryResult> result=parser.execute("SELECT ALBUM", metaData);
 		Assert.assertEquals(3, result.size());
-		result.forEach((key,value)->Assert.assertEquals(1, value.keySet().size()));
+		result.forEach(res->Assert.assertEquals(1, res.getMetaData().size()));
 	}
 	
 	@Test
 	public void testParseColumnSpecifier2Test() throws ParseException {
 		QueryParser parser=new QueryParser();
-		Map<URI,Map<MetaDataEnum,String>> result=parser.execute("SELECT ALBUM, TITLE", metaData);
+		List<QueryResult> result=parser.execute("SELECT ALBUM, TITLE", metaData);
 		Assert.assertEquals(3, result.size());
-		result.forEach((key,value)->Assert.assertEquals(2, value.keySet().size()));
+		result.forEach(res->Assert.assertEquals(2, res.getMetaData().size()));
 	}
 	
 	@Test(expected=ParseException.class)
@@ -142,14 +160,14 @@ public class QueryParserTest {
 	@Test
 	public void testParseNegativeIntegerNumberEnd() throws ParseException {
 		QueryParser parser=new QueryParser();
-		Map<URI,Map<MetaDataEnum,String>> result=parser.execute("SELECT ALBUM WHERE TRACK_ID = -300", metaData);
+		List<QueryResult> result=parser.execute("SELECT ALBUM WHERE TRACK_ID = -300", metaData);
 		Assert.assertTrue(result.isEmpty());
 	}
 	
 	@Test
 	public void testParseIntegerNumberEnd() throws ParseException {
 		QueryParser parser=new QueryParser();
-		Map<URI,Map<MetaDataEnum,String>> result=parser.execute("SELECT ALBUM WHERE TRACK_ID = 300", metaData);
+		List<QueryResult> result=parser.execute("SELECT ALBUM WHERE TRACK_ID = 300", metaData);
 		Assert.assertTrue(result.isEmpty());
 	}
 	
@@ -162,15 +180,15 @@ public class QueryParserTest {
 	@Test
 	public void testParseFloatingPointNumberEnd() throws ParseException {
 		QueryParser parser=new QueryParser();
-		Map<URI,Map<MetaDataEnum,String>> result=parser.execute("SELECT ALBUM WHERE RATING = 3.14159", metaData);
+		List<QueryResult> result=parser.execute("SELECT ALBUM WHERE RATING = 3.14159", metaData);
 		Assert.assertEquals(2, result.size());
-		result.forEach((key,value)->Assert.assertEquals(2, value.keySet().size()));
+		result.forEach(res->Assert.assertEquals(2, res.getMetaData().size()));
 	}
 	
 	@Test
 	public void testParseNegativeFloatingPointNumberEnd() throws ParseException {
 		QueryParser parser=new QueryParser();
-		Map<URI,Map<MetaDataEnum,String>> result=parser.execute("SELECT ALBUM WHERE RATING = -3.14159", metaData);
+		List<QueryResult> result=parser.execute("SELECT ALBUM WHERE RATING = -3.14159", metaData);
 	}
 		
 	@Test(expected=ParseException.class)
@@ -188,7 +206,7 @@ public class QueryParserTest {
 	@Test
 	public void testParseDateEnd() throws ParseException {
 		QueryParser parser=new QueryParser();
-		Map<URI,Map<MetaDataEnum,String>> result=parser.execute("SELECT ALBUM WHERE ENCODED_BY = 2014-11-15", metaData);
+		List<QueryResult> result=parser.execute("SELECT ALBUM WHERE ENCODED_BY = 2014-11-15", metaData);
 		Assert.assertTrue(result.isEmpty());
 	}
 	
@@ -219,51 +237,51 @@ public class QueryParserTest {
 	@Test
 	public void testParseEmptyString() throws ParseException {
 		QueryParser parser=new QueryParser();
-		Map<URI,Map<MetaDataEnum,String>> result=parser.execute("SELECT ALBUM WHERE ENCODED_BY =\"\"", metaData);
+		List<QueryResult> result=parser.execute("SELECT ALBUM WHERE ENCODED_BY =\"\"", metaData);
 		Assert.assertTrue(result.isEmpty());
 	}
 	
 	@Test
 	public void testParseString() throws ParseException {
 		QueryParser parser=new QueryParser();
-		Map<URI,Map<MetaDataEnum,String>> result=parser.execute("SELECT ALBUM WHERE GENRE =\"Metalcore\"", metaData);
+		List<QueryResult> result=parser.execute("SELECT ALBUM WHERE GENRE =\"Metalcore\"", metaData);
 		Assert.assertEquals(2, result.size());
-		result.forEach((key,value)->Assert.assertEquals(2, value.keySet().size()));
+		result.forEach(res->Assert.assertEquals(2, res.getMetaData().size()));
 	}
 	
 	@Test
 	public void testParseString2() throws ParseException {
 		QueryParser parser=new QueryParser();
-		Map<URI,Map<MetaDataEnum,String>> result=parser.execute("SELECT ALBUM, TITLE, ARTIST WHERE GENRE =\"Metalcore\"", metaData);
+		List<QueryResult> result=parser.execute("SELECT ALBUM, TITLE, ARTIST WHERE GENRE =\"Metalcore\"", metaData);
 		Assert.assertEquals(2, result.size());
-		result.forEach((key,value)->Assert.assertEquals(4, value.keySet().size()));
+		result.forEach(res->Assert.assertEquals(4, res.getMetaData().size()));
 	}
 	
 	@Test
 	public void testParseAndQuery() throws ParseException {
 		QueryParser parser=new QueryParser();
-		Map<URI,Map<MetaDataEnum,String>> result=parser.execute("SELECT ALBUM, TITLE, ARTIST WHERE GENRE =\"Metalcore\" AND TRACK_ID=9", metaData);
+		List<QueryResult> result=parser.execute("SELECT ALBUM, TITLE, ARTIST WHERE GENRE =\"Metalcore\" AND TRACK_ID=9", metaData);
 		Assert.assertTrue(result.isEmpty());
 	}
 	
 	@Test
 	public void testParseAndQuery2() throws ParseException {
 		QueryParser parser=new QueryParser();
-		Map<URI,Map<MetaDataEnum,String>> result=parser.execute("SELECT ALBUM, TITLE, ARTIST WHERE ARTIST =\"Eluveitie\" AND TRACK_ID=9", metaData);
+		List<QueryResult> result=parser.execute("SELECT ALBUM, TITLE, ARTIST WHERE ARTIST =\"Eluveitie\" AND TRACK_ID=9", metaData);
 		Assert.assertEquals(1, result.size());
 	}
 	
 	@Test
 	public void testParseOrQuery() throws ParseException {
 		QueryParser parser=new QueryParser();
-		Map<URI,Map<MetaDataEnum,String>> result=parser.execute("SELECT ALBUM, TITLE, ARTIST WHERE GENRE =\"bla\" OR TRACK_ID=123456789", metaData);
+		List<QueryResult> result=parser.execute("SELECT ALBUM, TITLE, ARTIST WHERE GENRE =\"bla\" OR TRACK_ID=123456789", metaData);
 		Assert.assertTrue(result.isEmpty());
 	}
 	
 	@Test
 	public void testParseOrQuery2() throws ParseException {
 		QueryParser parser=new QueryParser();
-		Map<URI,Map<MetaDataEnum,String>> result=parser.execute("SELECT ALBUM, TITLE, ARTIST WHERE ARTIST =\"Eluveitie\" OR ARTIST=\"Killswitch Engage\"", metaData);
+		List<QueryResult> result=parser.execute("SELECT ALBUM, TITLE, ARTIST WHERE ARTIST =\"Eluveitie\" OR ARTIST=\"Killswitch Engage\"", metaData);
 		Assert.assertEquals(3, result.size());
 	}
 }

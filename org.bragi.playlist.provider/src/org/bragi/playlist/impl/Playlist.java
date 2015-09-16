@@ -355,8 +355,8 @@ public class Playlist implements PlaylistInterface {
 		if (query!=null && queryParser!=null) {
 			try {
 				Map<URI, Map<MetaDataEnum, String>> metaData=playlist.stream().distinct().collect(Collectors.toMap(entry->entry.getUri(),entry->entry.getMetaData()));
-				Map<URI, Map<MetaDataEnum, String>> filteredMetaData=queryParser.execute(query, metaData);
-				return playlist.stream().filter(entry->filteredMetaData.containsKey(entry.getUri())).collect(Collectors.toList());
+				List<URI> filteredUris=queryParser.execute(query, metaData).stream().map(entry->entry.getUri()).collect(Collectors.toList());
+				return playlist.stream().filter(entry->filteredUris.contains(entry.getUri())).collect(Collectors.toList());
 			} catch (Exception e) {
 				e.printStackTrace();
 			}

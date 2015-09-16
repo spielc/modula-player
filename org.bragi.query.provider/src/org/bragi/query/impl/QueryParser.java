@@ -13,16 +13,20 @@ package org.bragi.query.impl;
 
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.bragi.metadata.MetaDataEnum;
 import org.bragi.query.ParseException;
+import org.bragi.query.QueryKeywords;
 import org.bragi.query.QueryParserInterface;
+import org.bragi.query.QueryResult;
 import org.bragi.query.Token;
 import org.bragi.query.TokenType;
 import org.osgi.service.component.annotations.Component;
@@ -36,10 +40,13 @@ public class QueryParser implements QueryParserInterface {
 	
 	private List<MetaDataEnum> queriedMetaData;
 	private Predicate<Entry<URI, Map<MetaDataEnum, String>>> filter;
+	private Comparator<Entry<URI, Map<MetaDataEnum, String>>> comparator;
+	private String colName;
 	
 	public QueryParser() {
 		queriedMetaData=new ArrayList<>();
 		filter=null;
+		comparator=null;
 	}
 	
 	private Predicate<Entry<URI, Map<MetaDataEnum, String>>> filter(MetaDataEnum field, String operator, String value) {
@@ -50,48 +57,22 @@ public class QueryParser implements QueryParserInterface {
 			try {
 				Object realValue=Long.parseLong(value);
 				return entry -> entry.getValue().entrySet().stream().anyMatch(e->e.getKey()==field && realValue.equals(Long.parseLong(e.getValue())));
-				//return entry -> entry.getKey()==field && realValue.equals(Long.parseLong(entry.getValue()));
 			} catch (NumberFormatException nfe) {
 				
 			}
 			try {
 				Object realValue=Double.parseDouble(value);
 				return entry -> entry.getValue().entrySet().stream().anyMatch(e->e.getKey()==field && realValue.equals(Double.parseDouble(e.getValue())));
-				//return entry -> entry.getKey()==field && realValue.equals(Double.parseDouble(entry.getValue()));
 			} catch (NumberFormatException nfe) {
 				
 			}
 			return entry -> entry.getValue().entrySet().stream().anyMatch(e->e.getKey()==field && value.equals(e.getValue()));
-			//return entry -> entry.getKey()==field && entry.getValue().equals(value);
-		case "<>":
-			//return entry -> entry.getKey()==field && !entry.getValue().equals(value);
+		// TODO implement other operators
+//		case "<>":
+			
 		}
 		return entry -> false;
 	}
-	
-//	private Predicate<Entry<MetaDataEnum,String>> filter(MetaDataEnum field, String operator, String value) {
-//		if (!queriedMetaData.contains(field))
-//			queriedMetaData.add(field);
-//		switch(operator) {
-//		case "=":
-//			try {
-//				Object realValue=Long.parseLong(value);
-//				return entry -> entry.getKey()==field && realValue.equals(Long.parseLong(entry.getValue()));
-//			} catch (NumberFormatException nfe) {
-//				
-//			}
-//			try {
-//				Object realValue=Double.parseDouble(value);
-//				return entry -> entry.getKey()==field && realValue.equals(Double.parseDouble(entry.getValue()));
-//			} catch (NumberFormatException nfe) {
-//				
-//			}
-//			return entry -> entry.getKey()==field && entry.getValue().equals(value);
-//		case "<>":
-//			return entry -> entry.getKey()==field && !entry.getValue().equals(value);
-//		}
-//		return entry -> false;
-//	}
 	
 	private void parse(String query) throws ParseException {
 		QueryScanner scanner=new QueryScanner(query);
@@ -142,6 +123,26 @@ public class QueryParser implements QueryParserInterface {
 //			else
 //				throw new ParseException(token.getType(), TokenType.COLUMN_NAME);
 			break;
+		case ORDER:
+			token=scanner.scan();
+			if (token.getType()!=TokenType.BY)
+				throw new ParseException(token.getType(), TokenType.BY);
+			token=scanner.scan();
+			if (token.getType()!=TokenType.COLUMN_NAME)
+				throw new ParseException(token.getType(), TokenType.COLUMN_NAME);
+			String colName = token.getValue();
+			token=scanner.scan();
+			if (token.getType()!=TokenType.ORDER_DIRECTION)
+				throw new ParseException(token.getType(), TokenType.ORDER_DIRECTION);
+			String direction=token.getValue();
+			comparator=(entry1,entry2)->{
+				Map<MetaDataEnum, String> map1=entry1.getValue();
+				Map<MetaDataEnum, String> map2=entry2.getValue();
+				MetaDataEnum enumValue=Enum.valueOf(MetaDataEnum.class, colName);
+				return map1.get(enumValue).compareTo(map2.get(enumValue));
+			};
+			if (direction.equals(QueryKeywords.ORDER_DIRECTION_DESC))
+				comparator=comparator.reversed();
 		case NONE:
 			break;
 		default:
@@ -248,16 +249,24 @@ public class QueryParser implements QueryParserInterface {
 	}
 	
 	@Override
-	public Map<URI,Map<MetaDataEnum,String>> execute(String query, Map<URI,Map<MetaDataEnum,String>> metaData) throws ParseException {
+	public List<QueryResult> execute(String query, Map<URI,Map<MetaDataEnum,String>> metaData) throws ParseException {
 		queriedMetaData.clear();
 		filter=null;
 		parse(query);
-//		Map<URI,Map<MetaDataEnum,String>> metaData=indexer.fetch();
 		metaData.replaceAll((key, value)->value.entrySet().stream().filter(entry->queriedMetaData.contains(entry.getKey())).collect(Collectors.toMap(entry->entry.getKey(), entry->entry.getValue())));
+		Stream<Entry<URI,Map<MetaDataEnum,String>>> result=metaData.entrySet().stream();
 		if (filter!=null) 
-			//metaData=metaData.entrySet().stream().filter(entry->entry.getValue().entrySet().stream().peek(System.out::println).anyMatch(filter)).collect(Collectors.toMap(entry->entry.getKey(), entry->entry.getValue()));
-			metaData=metaData.entrySet().stream().filter(filter).collect(Collectors.toMap(entry->entry.getKey(), entry->entry.getValue()));
-		return metaData;
+			result=result.filter(filter);
+		if (comparator!=null)
+			result=result.sorted(comparator);
+		return result.map(QueryParser::createQueryResult).collect(Collectors.toList());
+	}
+	
+	private static QueryResult createQueryResult(Entry<URI,Map<MetaDataEnum,String>> entry) {
+		QueryResult result=new QueryResult();
+		result.setUri(entry.getKey());
+		result.setMetaData(entry.getValue());
+		return result;
 	}
 	
 	private Token parseColumnSpecifier(QueryScanner scanner, List<MetaDataEnum> queriedMetaData) throws ParseException {

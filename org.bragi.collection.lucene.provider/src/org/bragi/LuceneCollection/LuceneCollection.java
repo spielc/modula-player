@@ -37,6 +37,7 @@ import org.bragi.collection.CollectionInterface;
 import org.bragi.indexer.IndexerInterface;
 import org.bragi.metadata.MetaDataEnum;
 import org.bragi.query.QueryParserInterface;
+import org.bragi.query.QueryResult;
 import org.osgi.service.cm.Configuration;
 import org.osgi.service.cm.ConfigurationAdmin;
 import org.osgi.service.component.annotations.Activate;
@@ -280,10 +281,10 @@ public class LuceneCollection implements CollectionInterface {
 		}
 	}
 
-	public static CollectionEntry createCollectionEntry(Map.Entry<URI, Map<MetaDataEnum, String>> entry) {
+	public static CollectionEntry createCollectionEntry(QueryResult result) {
 		CollectionEntry collectionEntry=new CollectionEntry();
-		collectionEntry.setUri(entry.getKey());
-		collectionEntry.setMetaData(entry.getValue());
+		collectionEntry.setUri(result.getUri());
+		collectionEntry.setMetaData(result.getMetaData());
 		return collectionEntry;
 	}
 
@@ -294,8 +295,7 @@ public class LuceneCollection implements CollectionInterface {
 			MetaDataEnum[] metaDataValues=MetaDataEnum.values();
 			try {
 				Map<URI,Map<MetaDataEnum,String>> collectionMetaData=indexer.filter("*", metaDataValues);
-				collectionMetaData=queryParser.execute(query, collectionMetaData);
-				returnValue=collectionMetaData.entrySet().stream().map(LuceneCollection::createCollectionEntry).collect(Collectors.toList());
+				returnValue=queryParser.execute(query, collectionMetaData).stream().map(LuceneCollection::createCollectionEntry).collect(Collectors.toList());
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
