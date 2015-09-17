@@ -124,30 +124,38 @@ public class QueryParser implements QueryParserInterface {
 //				throw new ParseException(token.getType(), TokenType.COLUMN_NAME);
 			break;
 		case ORDER:
-			token=scanner.scan();
-			if (token.getType()!=TokenType.BY)
-				throw new ParseException(token.getType(), TokenType.BY);
-			token=scanner.scan();
-			if (token.getType()!=TokenType.COLUMN_NAME)
-				throw new ParseException(token.getType(), TokenType.COLUMN_NAME);
-			String colName = token.getValue();
-			token=scanner.scan();
-			if (token.getType()!=TokenType.ORDER_DIRECTION)
-				throw new ParseException(token.getType(), TokenType.ORDER_DIRECTION);
-			String direction=token.getValue();
-			comparator=(entry1,entry2)->{
-				Map<MetaDataEnum, String> map1=entry1.getValue();
-				Map<MetaDataEnum, String> map2=entry2.getValue();
-				MetaDataEnum enumValue=Enum.valueOf(MetaDataEnum.class, colName);
-				return map1.get(enumValue).compareTo(map2.get(enumValue));
-			};
-			if (direction.equals(QueryKeywords.ORDER_DIRECTION_DESC))
-				comparator=comparator.reversed();
+			parseOrderBy(scanner);
 		case NONE:
 			break;
 		default:
 			throw new ParseException(token.getType(), TokenType.WHERE);
 		}
+	}
+
+	/**
+	 * @param scanner
+	 * @throws ParseException
+	 */
+	private void parseOrderBy(QueryScanner scanner) throws ParseException {
+		Token token=scanner.scan();
+		if (token.getType()!=TokenType.BY)
+			throw new ParseException(token.getType(), TokenType.BY);
+		token=scanner.scan();
+		if (token.getType()!=TokenType.COLUMN_NAME)
+			throw new ParseException(token.getType(), TokenType.COLUMN_NAME);
+		String colName = token.getValue();
+		token=scanner.scan();
+		if (token.getType()!=TokenType.ORDER_DIRECTION)
+			throw new ParseException(token.getType(), TokenType.ORDER_DIRECTION);
+		String direction=token.getValue();
+		comparator=(entry1,entry2)->{
+			Map<MetaDataEnum, String> map1=entry1.getValue();
+			Map<MetaDataEnum, String> map2=entry2.getValue();
+			MetaDataEnum enumValue=Enum.valueOf(MetaDataEnum.class, colName);
+			return map1.get(enumValue).compareTo(map2.get(enumValue));
+		};
+		if (direction.equals(QueryKeywords.ORDER_DIRECTION_DESC))
+			comparator=comparator.reversed();
 	}
 	
 	private void parseWhereClause(QueryScanner scanner, TokenType booleanOperator) throws ParseException {
@@ -180,6 +188,8 @@ public class QueryParser implements QueryParserInterface {
 			if ((type==TokenType.AND) || (type==TokenType.OR))
 				parseWhereClause(scanner, type);
 		}
+		else if (token.getType()==TokenType.ORDER)
+			parseOrderBy(scanner);
 		else
 			throw new ParseException(token.getType(), TokenType.COLUMN_NAME);
 	}

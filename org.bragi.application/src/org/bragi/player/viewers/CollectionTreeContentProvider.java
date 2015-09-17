@@ -100,7 +100,7 @@ public class CollectionTreeContentProvider implements ITreeContentProvider {
 		CollectionInterface collection=collections.get(0);
 		final MetaDataEnum realMeta=meta;
 		final String realChildQuery=childQuery;
-		List<TreeNode> children=collection.filter(query).stream().map(entry->entry.getMetaData().get(realMeta)).distinct().map(value->createChildNode(parent, realMeta, realChildQuery, value)).collect(Collectors.toList());
+		List<TreeNode> children=collection.filter(query+" ORDER BY "+meta.name()+" ASC").stream().map(entry->entry.getMetaData().get(realMeta)).distinct().map(value->createChildNode(parent, realMeta, realChildQuery, value)).collect(Collectors.toList());
 		return children.toArray();
 	}
 	
