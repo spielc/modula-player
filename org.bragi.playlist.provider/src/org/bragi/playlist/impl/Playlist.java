@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -248,6 +249,20 @@ public class Playlist implements PlaylistInterface {
 	@Override
 	public void shuffle() {
 		Collections.shuffle(playlist);
+		List<String> clonedPlaylist=new ArrayList<>();
+		playlist.stream().map(entry->entry.getUri().toString()).forEach(clonedPlaylist::add);
+		// remove all tracks
+		for (int i=playlist.size()-1;i>=0;i--)
+			removeMedia(i);
+		// and now add the tracks again (and thus update all interested parties)
+		clonedPlaylist.stream().forEach(uri->{
+			try {
+				addMedia(uri);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}}
+		);
+		
 	}
 
 	/* (non-Javadoc)

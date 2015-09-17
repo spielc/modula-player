@@ -273,4 +273,27 @@ public class PlaylistTest {
 		verify(config,times(1)).update(properties);
 		Assert.assertFalse(playlist.getRandom());		
 	}
+	
+	@Test
+	public void shuffleTest() throws Exception {
+		URI[] uris=new URI[] {
+				URI.create(MP3_URL),
+				URI.create(MP3_1_URL)
+		};
+		playlist.addMedia(uris[0].toString());
+		playlist.addMedia(uris[1].toString());
+		playlist.addMedia(uris[0].toString());
+		playlist.addMedia(uris[1].toString());
+		playlist.shuffle();
+		HashMap<String,URI> eventData=new HashMap<>();
+		eventData.put(Playlist.URI_EVENTDATA, uris[0]);
+		verify(eventAdmin,times(2)).postEvent(new Event(Playlist.REMOVE_EVENT,eventData));
+		// 4 times because the file is added twice using addMedia and another two times in shuffle
+		verify(eventAdmin,times(4)).postEvent(new Event(Playlist.ADD_EVENT,eventData));
+		eventData.clear();
+		eventData.put(Playlist.URI_EVENTDATA, uris[1]);
+		verify(eventAdmin,times(2)).postEvent(new Event(Playlist.REMOVE_EVENT,eventData));
+		// 4 times because the file is added twice using addMedia and another two times in shuffle
+		verify(eventAdmin,times(4)).postEvent(new Event(Playlist.ADD_EVENT,eventData));
+	}
 }

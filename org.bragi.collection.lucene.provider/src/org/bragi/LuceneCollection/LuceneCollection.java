@@ -28,6 +28,7 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ForkJoinPool;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.bragi.LuceneCollection.internal.CollectionChangeHandlerThread;
@@ -70,6 +71,39 @@ public class LuceneCollection implements CollectionInterface {
 		collectionChangeHandler.setEventAdmin(eventAdmin);
 		collectionRoots=new ArrayList<>();
 		modified(map);
+		try {
+			Map<URI,Map<MetaDataEnum,String>> collectionEntries=indexer.filter("*", MetaDataEnum.TITLE);
+			List<Path> files=collectionEntries.entrySet().parallelStream()
+					.map(entry->entry.getKey())
+					.map(Paths::get)
+					.collect(Collectors.toList());
+			final List<URI> filesToIndex=new ArrayList<>();
+			for (String collectionRoot : collectionRoots) {
+				Files.walkFileTree(Paths.get(URI.create(collectionRoot)), EnumSet.of(FileVisitOption.FOLLOW_LINKS), Integer.MAX_VALUE,
+				         new SimpleFileVisitor<Path>() {		
+
+		                    @Override
+							public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) throws IOException {
+		                    	if (!files.contains(path))
+		                    		filesToIndex.add(path.toUri());
+		                    	return FileVisitResult.CONTINUE;
+							}
+
+							@Override
+							public FileVisitResult preVisitDirectory(Path dir,BasicFileAttributes attrs) throws IOException {
+								collectionChangeHandler.register(dir);
+								return FileVisitResult.CONTINUE;
+							}
+		                    		                    	
+		         });
+			}
+			executeIndexAction(()->filesToIndex);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		collectionChangeHandler.setActive(true);
+		collectionChangeHandler.start();
 	}
 	
 	@Modified
@@ -110,8 +144,9 @@ public class LuceneCollection implements CollectionInterface {
 		indexer=pIndexer;
 		if (collectionChangeHandler!=null)
 			collectionChangeHandler.setIndexer(pIndexer);
-		if (indexer!=null) {
+		if (indexer!=null && collectionRoots!=null) {
 			try {
+				
 //				Map<URI,Map<MetaDataEnum,String>> collectionEntries=indexer.filter("*", MetaDataEnum.TITLE);
 //				System.out.println();
 //				// (re-)register directories of collection in collectionChangeHandler
@@ -124,14 +159,15 @@ public class LuceneCollection implements CollectionInterface {
 //											.map(Object::toString)
 //											.toArray(String[]::new);
 //				Path rootPath=Paths.get(commonPath(bla));
-//				Files.walk(rootPath, FileVisitOption.FOLLOW_LINKS).filter(path->path.toFile().isDirectory())
-//											.forEach(path->{
-//												try {
-//													collectionChangeHandler.register(path);
-//												} catch (Exception e) {
-//													System.out.println("collectionChangeHandler.register failed for: "+path.toString());
-//												}
-//											});
+				Path rootPath=Paths.get(collectionRoots.get(0));
+				Files.walk(rootPath, FileVisitOption.FOLLOW_LINKS).filter(path->path.toFile().isDirectory())
+											.forEach(path->{
+												try {
+													collectionChangeHandler.register(path);
+												} catch (Exception e) {
+													System.out.println("collectionChangeHandler.register failed for: "+path.toString());
+												}
+											});
 ////				// TODO iterate over all files in all parent directories of collectionEntries and index the ones that are not yet contained in the index
 //				//directories.map
 ////				collectionEntries.entrySet().parallelStream()
@@ -255,16 +291,32 @@ public class LuceneCollection implements CollectionInterface {
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-	        IndexAction task=new IndexAction(files);
-	        IndexAction.setIndexer(indexer);
-	        IndexAction.setAdmin(eventAdmin);
-	        ForkJoinPool pool = new ForkJoinPool();
-	        pool.invoke(task);
-	        collectionChangeHandler.setActive(true);
-			collectionChangeHandler.start();
+	        executeIndexAction(()->files);
+	        if (!collectionChangeHandler.isActive()) {
+		        collectionChangeHandler.setActive(true);
+		        collectionChangeHandler.start();
+	        }
 			collectionRoots.add(uri);
 			createOrUpdateConfiguration();
+//	        IndexAction task=new IndexAction(files); 
+//	        IndexAction.setIndexer(indexer);
+//	        IndexAction.setAdmin(eventAdmin);
+//	        ForkJoinPool pool = new ForkJoinPool();
+//	        pool.invoke(task);
+//	        collectionChangeHandler.setActive(true);
+//			collectionChangeHandler.start();
+//			collectionRoots.add(uri);
+//			createOrUpdateConfiguration();
 		}
+	}
+	
+	private void executeIndexAction(Supplier<List<URI>> files) {
+		IndexAction task=new IndexAction(files.get());
+        IndexAction.setIndexer(indexer);
+        IndexAction.setAdmin(eventAdmin);
+        ForkJoinPool pool = new ForkJoinPool();
+        //pool.invoke(task);
+        pool.execute(task);
 	}
 	
 	/**
