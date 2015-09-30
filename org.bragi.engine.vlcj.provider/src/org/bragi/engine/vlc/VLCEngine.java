@@ -106,7 +106,6 @@ public class VLCEngine implements EngineInterface, EventHandler {
 		if (player!=null) {
 			//currentIndex++;
 			playerComponent.forward();
-			player.playNext();
 //			postNavigateEvents(currentIndex, ++currentIndex);
 			//playerComponent.postEvent(new Event(EngineInterface.FORWARD_EVENT,(Map<String,Object>)null));
 		}
@@ -117,7 +116,6 @@ public class VLCEngine implements EngineInterface, EventHandler {
 		if (player!=null) {
 			//currentIndex--;
 			playerComponent.backward();
-			player.playPrevious();
 //			postNavigateEvents(currentIndex, --currentIndex);
 			//playerComponent.postEvent(new Event(EngineInterface.BACKWARD_EVENT,(Map<String,Object>)null));
 		}
@@ -221,14 +219,17 @@ public class VLCEngine implements EngineInterface, EventHandler {
 			e.printStackTrace();
 		}
 		player.setMediaList(playerComponent.getMediaList());
+		playerComponent.playlistChanged();
 	}
 	
 	private void handleEventWithBooleanEventData(Event event) {
 		boolean value=(boolean)event.getProperty(PlaylistInterface.BOOLEAN_EVENTDATA);
 		switch(event.getTopic()) {
 		case PlaylistInterface.RANDOM_CHANGED_EVENT:
+			playerComponent.setRandom(value);
 			break;
 		case PlaylistInterface.REPEAT_CHANGED_EVENT:
+			playerComponent.setRepeat(value);
 			if (value)
 				playerComponent.getMediaListPlayer().setMode(MediaListPlayerMode.LOOP);
 			else

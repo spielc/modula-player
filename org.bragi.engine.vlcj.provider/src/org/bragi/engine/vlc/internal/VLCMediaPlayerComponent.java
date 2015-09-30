@@ -11,30 +11,34 @@
  */
 package org.bragi.engine.vlc.internal;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.bragi.engine.EngineInterface;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
 
-import uk.co.caprica.vlcj.binding.internal.libvlc_media_t;
 import uk.co.caprica.vlcj.component.AudioMediaListPlayerComponent;
-import uk.co.caprica.vlcj.medialist.MediaListItem;
 import uk.co.caprica.vlcj.player.MediaPlayer;
-import uk.co.caprica.vlcj.player.list.MediaListPlayer;
 
 public class VLCMediaPlayerComponent extends AudioMediaListPlayerComponent {
 
 	private EventAdmin eventAdmin;
 	private int currentIndex;
-	private boolean isDirectionForward;
+	private UnlimitedListIterator songOrderIterator;
+	private boolean isRandomPlayback;
+	private boolean isRepeated;
 		
 	public VLCMediaPlayerComponent() {
 		super();
 		currentIndex=-1;
-		isDirectionForward=false;
+		isRandomPlayback=false;
+		isRepeated=false;
 	}
 	
 	public void setEventAdmin(EventAdmin pEventAdmin) {
@@ -46,20 +50,8 @@ public class VLCMediaPlayerComponent extends AudioMediaListPlayerComponent {
 	
 	@Override
 	public void finished(MediaPlayer mediaPlayer) {
+		changeSong(songOrderIterator::next);
 		postEvent(new Event(EngineInterface.FINISHED_EVENT,(Map<String,Object>)null));
-	}
-
-	@Override
-	public void nextItem(MediaListPlayer mediaListPlayer, libvlc_media_t item, String itemMrl) {
-		List<MediaListItem> mediaListItems=mediaListPlayer.getMediaList().items();
-		int newIndex=currentIndex+1;
-		if (!isDirectionForward)
-			newIndex=currentIndex-1;
-		int lastIndex=currentIndex;
-		currentIndex=(newIndex%mediaListItems.size());
-		postNavigateEvents(lastIndex, currentIndex);
-		if (!isDirectionForward)
-			isDirectionForward=true;
 	}
 
 	@Override
@@ -89,13 +81,18 @@ public class VLCMediaPlayerComponent extends AudioMediaListPlayerComponent {
 	}
 	
 	public void backward() {
-		System.out.println("backward");
-		isDirectionForward=false;
+		changeSong(songOrderIterator::previous);
 	}
 	
 	public void forward() {
-		System.out.println("forward");
-		isDirectionForward=true;
+		changeSong(songOrderIterator::next);
+	}
+	
+	private void changeSong(Supplier<Integer> newIndexSupplier) {
+		int newIndex=newIndexSupplier.get();
+		getMediaListPlayer().playItem(newIndex);
+		postNavigateEvents(currentIndex, newIndex);
+		currentIndex=newIndex;
 	}
 	
 	/**
@@ -107,12 +104,16 @@ public class VLCMediaPlayerComponent extends AudioMediaListPlayerComponent {
 	}
 	
 	public void play(int pCurrentIndex) {
-		isDirectionForward=(currentIndex<=pCurrentIndex);
-		currentIndex = pCurrentIndex;
-		if (isDirectionForward)
-			currentIndex--;
-		else
-			currentIndex++;
+		songOrderIterator.setCurrentIndex(pCurrentIndex);
+		currentIndex=pCurrentIndex;
+	}
+	
+	public void playlistChanged() {
+		List<Integer> tmpList = IntStream.range(0, getMediaList().size()).boxed().collect(Collectors.toList());
+		if (isRandomPlayback)
+			Collections.shuffle(tmpList);
+		songOrderIterator=new UnlimitedListIterator(tmpList);
+		songOrderIterator.setRepeated(isRepeated);
 	}
 	
 	/**
@@ -132,5 +133,16 @@ public class VLCMediaPlayerComponent extends AudioMediaListPlayerComponent {
 			event=new Event(EngineInterface.BACKWARD_EVENT,eventProperties);
 		if (event!=null)			
 			postEvent(event);
+	}
+	
+	public void setRepeat(boolean repeat) {
+		isRepeated=repeat;
+		if (songOrderIterator!=null)
+			songOrderIterator.setRepeated(repeat);
+	}
+	
+	public void setRandom(boolean random) {
+		isRandomPlayback=random;
+		playlistChanged();
 	}
 }
