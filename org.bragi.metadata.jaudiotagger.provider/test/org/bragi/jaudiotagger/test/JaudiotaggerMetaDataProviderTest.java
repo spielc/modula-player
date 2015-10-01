@@ -20,10 +20,9 @@ import java.util.EnumSet;
 
 import javax.imageio.ImageIO;
 
-import junit.framework.Assert;
-
 import org.bragi.jaudiotagger.JaudiotaggerMetaDataProvider;
 import org.bragi.metadata.MetaDataEnum;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
