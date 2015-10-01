@@ -362,7 +362,7 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 				boolean isPlayingOrPaused = (currentState==EngineStateEnum.PAUSED) || (currentState==EngineStateEnum.PLAYING);
 				stopButton.setEnabled(isPlayingOrPaused);
 				nextButton.setEnabled(isPlayingOrPaused);
-				previousButton.setEnabled(isPlayingOrPaused && (currentSongIndex>0)); 
+				previousButton.setEnabled(isPlayingOrPaused); 
 				playlistWidget.refresh();
 				switch(currentState) {
 				case INVALID:
