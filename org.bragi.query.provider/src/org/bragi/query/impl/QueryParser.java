@@ -41,7 +41,6 @@ public class QueryParser implements QueryParserInterface {
 	private List<MetaDataEnum> queriedMetaData;
 	private Predicate<Entry<URI, Map<MetaDataEnum, String>>> filter;
 	private Comparator<Entry<URI, Map<MetaDataEnum, String>>> comparator;
-	private String colName;
 	
 	public QueryParser() {
 		queriedMetaData=new ArrayList<>();
@@ -82,7 +81,7 @@ public class QueryParser implements QueryParserInterface {
 		
 		token = scanner.scan();
 		
-		String columnName, value;
+		String columnName;
 		switch (token.getType()) {
 		case ALL_SELECTOR:
 			queriedMetaData=EnumSet.allOf(MetaDataEnum.class).stream().collect(Collectors.toList());

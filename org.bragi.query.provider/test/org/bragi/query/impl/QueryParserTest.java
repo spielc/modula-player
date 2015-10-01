@@ -189,6 +189,7 @@ public class QueryParserTest {
 	public void testParseNegativeFloatingPointNumberEnd() throws ParseException {
 		QueryParser parser=new QueryParser();
 		List<QueryResult> result=parser.execute("SELECT ALBUM WHERE RATING = -3.14159", metaData);
+		Assert.assertTrue(result.isEmpty());
 	}
 		
 	@Test(expected=ParseException.class)
