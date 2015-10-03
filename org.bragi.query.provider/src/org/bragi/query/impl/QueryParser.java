@@ -186,6 +186,8 @@ public class QueryParser implements QueryParserInterface {
 			TokenType type=token.getType();
 			if ((type==TokenType.AND) || (type==TokenType.OR))
 				parseWhereClause(scanner, type);
+			else if (token.getType()==TokenType.ORDER)
+				parseOrderBy(scanner);
 		}
 		else if (token.getType()==TokenType.ORDER)
 			parseOrderBy(scanner);

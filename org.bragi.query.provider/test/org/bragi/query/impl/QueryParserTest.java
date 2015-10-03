@@ -281,13 +281,6 @@ public class QueryParserTest {
 	}
 	
 	@Test
-	public void testParseAndQueryWithOrderBy() throws ParseException {
-		QueryParser parser=new QueryParser();
-		List<QueryResult> result=parser.execute("SELECT ALBUM, TITLE, ARTIST WHERE ARTIST =\"Eluveitie\" AND TRACK_ID=9 ORDER BY TITLE ASC", metaData);
-		Assert.assertEquals(1, result.size());
-	}
-	
-	@Test
 	public void testParseOrQuery() throws ParseException {
 		QueryParser parser=new QueryParser();
 		List<QueryResult> result=parser.execute("SELECT ALBUM, TITLE, ARTIST WHERE GENRE =\"bla\" OR TRACK_ID=123456789", metaData);
@@ -306,5 +299,6 @@ public class QueryParserTest {
 		QueryParser parser=new QueryParser();
 		List<QueryResult> result=parser.execute("SELECT ALBUM, TITLE, ARTIST WHERE ARTIST =\"Eluveitie\" OR ARTIST=\"Killswitch Engage\" ORDER BY TITLE DESC", metaData);
 		Assert.assertEquals(3, result.size());
+		Assert.assertEquals(result.get(2).getMetaData().get(MetaDataEnum.TITLE), "A Rose for Epona");
 	}
 }
