@@ -30,12 +30,15 @@ import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.StatusLineManager;
 import org.eclipse.jface.window.ApplicationWindow;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.SashForm;
 import org.eclipse.swt.events.MouseAdapter;
 import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.layout.FillLayout;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
@@ -46,8 +49,6 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
-
-import swing2swt.layout.BorderLayout;
 
 @Component(immediate=true) 
 public class MainWindow extends ApplicationWindow implements EngineStateChangeListener { 
@@ -73,6 +74,8 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 	private SeekWidget seekWidget;
 	private CollectionWidget collectionWidget;
 	private PlaylistWidget playlistWidget;
+	private SashForm sashForm;
+	private Composite composite;
 	
 	@org.osgi.service.component.annotations.Reference(cardinality=ReferenceCardinality.OPTIONAL, policy=ReferencePolicy.DYNAMIC)
 	public void setEngine(EngineInterface pEngine) {
@@ -183,108 +186,118 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 	@Override
 	protected Control createContents(Composite parent) {
 		container = new Composite(parent, SWT.NONE);
-		container.setLayout(new BorderLayout(0, 0));
+		container.setLayout(new FillLayout(SWT.VERTICAL));
 		{
-			playlistWidget = new PlaylistWidget(container, SWT.NONE);
-			playlistWidget.setLayoutData(BorderLayout.EAST);
-			playlistWidget.setEngine(engine);
 			{
-				collectionWidget = new CollectionWidget(container, SWT.NONE);
-				collectionWidget.setLayoutData(BorderLayout.WEST);
 				{
-					engineComposite = new Composite(container, SWT.NONE);
-					engineComposite.setLayoutData(BorderLayout.SOUTH);
-					engineComposite.setLayout(new FillLayout(SWT.HORIZONTAL));
 					{
-						previousButton = new Button(engineComposite, SWT.NONE);
-						previousButton.setEnabled(false);
-						previousButton.setText("<");
-						previousButton.addMouseListener(new MouseAdapter() {
-
-							@Override
-							public void mouseDown(MouseEvent e) {
-								if (engine!=null)
-									engine.backward();
-								super.mouseDown(e);
+						{
+							composite = new Composite(container, SWT.NONE);
+							composite.setLayout(new GridLayout(1, false));
+							seekWidget = new SeekWidget(composite, SWT.NONE);
+							seekWidget.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
+							seekWidget.setSize(168, 15);
+							{
+								sashForm = new SashForm(composite, SWT.NONE);
+								sashForm.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 1, 1));
+								sashForm.setSize(639, 43);
+								collectionWidget = new CollectionWidget(sashForm, SWT.NONE);
+								playlistWidget = new PlaylistWidget(sashForm, SWT.NONE);
+								playlistWidget.setEngine(engine);
+								sashForm.setWeights(new int[] {1, 1});
 							}
-							
-						});
-					}
-					{
-						playButton = new Button(engineComposite, SWT.NONE);
-						playButton.setText("Play");
-						playButton.addMouseListener(new MouseAdapter() {
+							engineComposite = new Composite(composite, SWT.NONE);
+							engineComposite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, false, false, 1, 1));
+							engineComposite.setSize(420, 27);
+							engineComposite.setLayout(new FillLayout(SWT.HORIZONTAL));
+							{
+								previousButton = new Button(engineComposite, SWT.NONE);
+								previousButton.setEnabled(false);
+								previousButton.setText("<");
+								previousButton.addMouseListener(new MouseAdapter() {
 
-							@Override
-							public void mouseDown(MouseEvent e) {
-								if (engine!=null) {
-									if (playButton.getText().equals("Play"))
-										engine.play(currentSongIndex);
-									else
-										engine.pause();
+									@Override
+									public void mouseDown(MouseEvent e) {
+										if (engine!=null)
+											engine.backward();
+										super.mouseDown(e);
+									}
 									
-								}
-								super.mouseDown(e);
+								});
 							}
-							
-						});
-					}
-					{
-						stopButton = new Button(engineComposite, SWT.NONE);
-						stopButton.setEnabled(false);
-						stopButton.setText("Stop");
-						stopButton.addMouseListener(new MouseAdapter() {
+							{
+								playButton = new Button(engineComposite, SWT.NONE);
+								playButton.setText("Play");
+								playButton.addMouseListener(new MouseAdapter() {
 
-							@Override
-							public void mouseDown(MouseEvent e) {
-								if (engine!=null)
-									engine.stop(true);
-								super.mouseDown(e);
-							}
-							
-						});
-					}
-					{
-						nextButton = new Button(engineComposite, SWT.NONE);
-						nextButton.setEnabled(false);
-						nextButton.setText(">");
-						nextButton.addMouseListener(new MouseAdapter() {
-
-							@Override
-							public void mouseDown(MouseEvent e) {
-								if (engine!=null) {
-									engine.forward();
+									@Override
+									public void mouseDown(MouseEvent e) {
+										if (engine!=null) {
+											if (playButton.getText().equals("Play"))
+												engine.play(currentSongIndex);
+											else
+												engine.pause();
+											
+										}
+										super.mouseDown(e);
+									}
 									
-								}
-								super.mouseDown(e);
+								});
 							}
-							
-						});
-					}
-					{
-						volumeSlider = new Slider(engineComposite, SWT.NONE);
-						volumeSlider.setMinimum(0);
-						volumeSlider.setMaximum(200);
-						volumeSlider.setThumb(1);
-						volumeSlider.setIncrement(1);
-						volumeSlider.setPageIncrement(10);
-						volumeSlider.addSelectionListener(new SelectionAdapter() {
+							{
+								stopButton = new Button(engineComposite, SWT.NONE);
+								stopButton.setEnabled(false);
+								stopButton.setText("Stop");
+								stopButton.addMouseListener(new MouseAdapter() {
 
-							@Override
-							public void widgetSelected(SelectionEvent e) {
-								if (engine!=null)
-									engine.setVolume(volumeSlider.getSelection());
-								volumeSlider.setToolTipText(String.valueOf(volumeSlider.getSelection()));
-								super.widgetSelected(e);
+									@Override
+									public void mouseDown(MouseEvent e) {
+										if (engine!=null)
+											engine.stop(true);
+										super.mouseDown(e);
+									}
+									
+								});
 							}
-							
-						});
+							{
+								nextButton = new Button(engineComposite, SWT.NONE);
+								nextButton.setEnabled(false);
+								nextButton.setText(">");
+								nextButton.addMouseListener(new MouseAdapter() {
+
+									@Override
+									public void mouseDown(MouseEvent e) {
+										if (engine!=null) {
+											engine.forward();
+											
+										}
+										super.mouseDown(e);
+									}
+									
+								});
+							}
+							volumeSlider = new Slider(engineComposite, SWT.NONE);
+							volumeSlider.setMinimum(0);
+							volumeSlider.setMaximum(200);
+							volumeSlider.setThumb(1);
+							volumeSlider.setIncrement(1);
+							volumeSlider.setPageIncrement(10);
+							volumeSlider.addSelectionListener(new SelectionAdapter() {
+
+								@Override
+								public void widgetSelected(SelectionEvent e) {
+									if (engine!=null)
+										engine.setVolume(volumeSlider.getSelection());
+									volumeSlider.setToolTipText(String.valueOf(volumeSlider.getSelection()));
+									super.widgetSelected(e);
+								}
+								
+							});
+							seekWidget.layout();
+						}
 					}
 				}
 			}
-			seekWidget = new SeekWidget(container, SWT.NONE);
-			seekWidget.setLayoutData(BorderLayout.NORTH);
-			seekWidget.layout();
 		}
 		// make sure the sub-widgets are correctly initialized
 		uiInitialized=true;
