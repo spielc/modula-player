@@ -95,6 +95,12 @@ public class LuceneCollectionTest {
         //test regular case
         collection.activate(new Hashtable<>());
 		collection.addCollectionRoot(root);
+		try {
+			Thread.sleep(5000);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		for (URI file : files) {
 			verify(indexer,times(1)).indexUri(file.toString());
 		}
