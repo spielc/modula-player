@@ -95,6 +95,9 @@ public class EngineStateMachine implements EventHandler {
 		case EngineInterface.FINISHED_EVENT:
 			currentSongFinished=true;
 			break;
+		case EngineInterface.VOLUME_CHANGED_EVENT:
+			eventData.add(event.getProperty(EngineInterface.CURRENT_VOLUME));
+			break;
 		default: 
 			System.out.println("Unknown eventtype '"+event.getTopic()+"'!");
 		}

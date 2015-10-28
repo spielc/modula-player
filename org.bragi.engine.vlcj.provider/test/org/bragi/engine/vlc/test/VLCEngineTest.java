@@ -126,4 +126,8 @@ public class VLCEngineTest {
 		}
 	}
 
+	@Test
+	public void testSeek() {
+		// TODO implement this test
+	}
 }

@@ -11,15 +11,26 @@
  */
 package org.bragi.engine.vlc;
 
+import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.List;
+import java.util.Map;
 
 import org.bragi.engine.EngineInterface;
 import org.bragi.engine.vlc.internal.URIParser;
 import org.bragi.engine.vlc.internal.VLCMediaPlayerComponent;
 import org.bragi.playlist.PlaylistInterface;
+import org.osgi.service.cm.Configuration;
+import org.osgi.service.cm.ConfigurationAdmin;
+import org.osgi.service.component.ComponentContext;
+import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.ConfigurationPolicy;
+import org.osgi.service.component.annotations.Deactivate;
+import org.osgi.service.component.annotations.Modified;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
@@ -34,30 +45,64 @@ import uk.co.caprica.vlcj.player.list.MediaListPlayerMode;
  * @author christoph
  *
  */
-@Component(property="event.topics=org/bragi/playlist/event/*")
+@Component(property="event.topics=org/bragi/playlist/event/*",configurationPolicy=ConfigurationPolicy.OPTIONAL)
 public class VLCEngine implements EngineInterface, EventHandler {
+	
+	private static final String COMPONENT_NAME = "org.bragi.engine.vlc.VLCEngine";
+	private static final String VOLUME ="VOLUME";
 	
 	private VLCMediaPlayerComponent playerComponent;
 	private MediaListPlayer player;
 	private EventAdmin eventAdmin;
+	private ConfigurationAdmin configAdmin;
 	private int volume;
 	private int currentIndex;
 	
-	public VLCEngine() {
+	@Activate
+	public void activate(Map<String,Object> map) {
 		playerComponent=new VLCMediaPlayerComponent();
 		player=playerComponent.getMediaListPlayer();
 		player.setMediaPlayer(playerComponent.getMediaPlayer());
 		currentIndex=0;
+		playerComponent.setEventAdmin(eventAdmin);
+		modified(map);
+	}
+
+	@Modified
+	public void modified(Map<String,Object> map) {
+		if (map.containsKey(VOLUME))
+			setVolume((int) map.get(VOLUME));
+	}
+	
+	@Deactivate
+	protected void deactivate(ComponentContext cContext, int reason) {
+		if (configAdmin!=null) {
+			try {
+				Configuration configuration = configAdmin.getConfiguration(COMPONENT_NAME, "?");
+				Hashtable<String, Object> map = new Hashtable<>();
+				map.put(VOLUME, volume);
+				configuration.update(map);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 	
 	@Reference
 	public void setEventAdmin(EventAdmin pEventAdmin) {
 		eventAdmin=pEventAdmin;
-		playerComponent.setEventAdmin(eventAdmin);
 	}
 	public void unsetEventAdmin(EventAdmin pEventAdmin) {
 		eventAdmin=null;
 		playerComponent.setEventAdmin(null);
+	}
+	
+	@Reference
+	public void setConfigAdmin(ConfigurationAdmin pConfigAdmin) {
+		configAdmin=pConfigAdmin;
+	}
+	public void unsetConfigAdmin(ConfigurationAdmin pConfigAdmin) {
+		configAdmin=null;
 	}
 	
 	/* (non-Javadoc)
@@ -85,7 +130,6 @@ public class VLCEngine implements EngineInterface, EventHandler {
 	public void pause() {
 		if (player!=null) {
 			player.pause();
-			//playerComponent.postEvent(new Event(EngineInterface.PAUSE_EVENT,(Map<String,Object>)null));
 		}
 	}
 
@@ -97,27 +141,20 @@ public class VLCEngine implements EngineInterface, EventHandler {
 		//the parameter is currently not used; will be used for stop-after-track feature
 		if (player!=null) {
 			player.stop();
-			//playerComponent.postEvent(new Event(EngineInterface.STOP_EVENT,(Map<String,Object>)null));
 		}
 	}
 
 	@Override
 	public void forward() {
 		if (player!=null) {
-			//currentIndex++;
 			playerComponent.forward();
-//			postNavigateEvents(currentIndex, ++currentIndex);
-			//playerComponent.postEvent(new Event(EngineInterface.FORWARD_EVENT,(Map<String,Object>)null));
 		}
 	}
 
 	@Override
 	public void backward() {
 		if (player!=null) {
-			//currentIndex--;
 			playerComponent.backward();
-//			postNavigateEvents(currentIndex, --currentIndex);
-			//playerComponent.postEvent(new Event(EngineInterface.BACKWARD_EVENT,(Map<String,Object>)null));
 		}
 	}
 
@@ -126,7 +163,7 @@ public class VLCEngine implements EngineInterface, EventHandler {
 	public void toggleMute() {
 		if (player!=null) {
 			//temporary workaround
-			int curVolume=getVolume();
+			int curVolume=playerComponent.getMediaPlayer().getVolume();
 			if (curVolume==0) 
 				setVolume(volume);
 			else {
@@ -141,16 +178,16 @@ public class VLCEngine implements EngineInterface, EventHandler {
 	public void setVolume(int newVolume) {
 		if (player!=null) 
 			playerComponent.getMediaPlayer().setVolume(newVolume);
+		if (eventAdmin!=null) {
+			volume=LibVlcConst.MIN_VOLUME;
+			volume=(newVolume<LibVlcConst.MAX_VOLUME)?newVolume:LibVlcConst.MAX_VOLUME;
+			Map<String,Object> eventProperties=new HashMap<>();
+			eventProperties.put(CURRENT_VOLUME, volume);
+			Event event=new Event(VOLUME_CHANGED_EVENT, eventProperties);
+			eventAdmin.postEvent(event);
+		}
 	}
 
-	
-	@Override
-	public int getVolume() {
-		int volume=LibVlcConst.MIN_VOLUME;
-		if (player!=null)
-			volume = playerComponent.getMediaPlayer().getVolume();
-		return (volume<LibVlcConst.MAX_VOLUME)?volume:LibVlcConst.MAX_VOLUME;
-	}
 	
 	@Override
 	public void handleEvent(Event event) {
@@ -158,36 +195,6 @@ public class VLCEngine implements EngineInterface, EventHandler {
 			handleEventWithUriEventData(event);
 		else if (event.containsProperty(PlaylistInterface.BOOLEAN_EVENTDATA))
 			handleEventWithBooleanEventData(event);
-//		if (event.containsProperty(PlaylistInterface.URI_EVENTDATA)) {
-//			try {
-//				URI uri=(URI)event.getProperty(PlaylistInterface.URI_EVENTDATA);
-//				String uriString=URIParser.getMrl(uri.toString()).value();
-//				int index=0;
-//				switch (event.getTopic()) {
-//				case PlaylistInterface.ADD_EVENT:
-//					playerComponent.getMediaList().addMedia(uriString);
-//					System.out.println(uriString+" added!!");
-//					break;
-//				case PlaylistInterface.INSERT_EVENT:
-//					index=(int)event.getProperty(PlaylistInterface.INDEX_EVENTDATA);
-//					playerComponent.getMediaList().insertMedia(index, uriString);
-//					break;
-//				case PlaylistInterface.REMOVE_EVENT:
-//					List<MediaListItem> items = playerComponent.getMediaList().items();
-//					for (MediaListItem item : items) {
-//						if (item.mrl().equals(uriString)) 
-//							break;
-//						index++;
-//					}
-//					if (index!=items.size())
-//						playerComponent.getMediaList().removeMedia(index);
-//					break;
-//				}
-//			} catch (URISyntaxException e) {
-//				e.printStackTrace();
-//			}
-//		}
-//		player.setMediaList(playerComponent.getMediaList());
 	}
 	
 	private void handleEventWithUriEventData(Event event) {
@@ -236,5 +243,11 @@ public class VLCEngine implements EngineInterface, EventHandler {
 				playerComponent.getMediaListPlayer().setMode(MediaListPlayerMode.DEFAULT);
 			break;
 		}
+	}
+
+	@Override
+	public void seek(long milliseconds) {
+		if (null!=playerComponent)
+			playerComponent.getMediaPlayer().setTime(milliseconds);
 	}
 }

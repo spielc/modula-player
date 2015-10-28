@@ -16,6 +16,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.bragi.collection.CollectionInterface;
 import org.bragi.engine.EngineInterface;
@@ -24,6 +25,7 @@ import org.bragi.player.statemachines.EngineStateEnum;
 import org.bragi.player.widgets.CollectionWidget;
 import org.bragi.player.widgets.PlaylistWidget;
 import org.bragi.player.widgets.SeekWidget;
+import org.bragi.playlist.PlaylistEntry;
 import org.bragi.playlist.PlaylistInterface;
 import org.eclipse.jface.action.CoolBarManager;
 import org.eclipse.jface.action.MenuManager;
@@ -42,6 +44,9 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Slider;
+import org.osgi.framework.Bundle;
+import org.osgi.framework.FrameworkUtil;
+import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
@@ -55,7 +60,7 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 	
 	private Thread thread;
 	
-	private EngineInterface engine;
+	private final AtomicReference<EngineInterface> engine=new AtomicReference<>();
 	private List<CollectionInterface> collections;
 	private PlaylistInterface playlist;
 
@@ -74,9 +79,9 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 	private CollectionWidget collectionWidget;
 	private PlaylistWidget playlistWidget;
 	
-	@org.osgi.service.component.annotations.Reference(cardinality=ReferenceCardinality.OPTIONAL, policy=ReferencePolicy.DYNAMIC)
+	@Reference(cardinality=ReferenceCardinality.OPTIONAL, policy=ReferencePolicy.DYNAMIC)
 	public void setEngine(EngineInterface pEngine) {
-		engine=pEngine;
+		engine.set(pEngine);
 		if (uiInitialized) {
 			getShell().getDisplay().asyncExec(()->{
 				if (playlistWidget!=null)
@@ -84,20 +89,20 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 			});
 		}
 		currentState=EngineStateEnum.LOADED;
+		reinitializePlaylist();
 	}
 	
 	public void unsetEngine(EngineInterface pEngine) {
-		engine=null;
-		if (uiInitialized) {
+		if (engine.compareAndSet(pEngine, null) && uiInitialized) {
 			getShell().getDisplay().asyncExec(()->{
 				if (playlistWidget!=null)
 					playlistWidget.setEngine(null);
 			});
+			currentState=EngineStateEnum.UNLOADED;
 		}
-		currentState=EngineStateEnum.UNLOADED;
 	}
 	
-	@org.osgi.service.component.annotations.Reference(cardinality=ReferenceCardinality.MULTIPLE, policy=ReferencePolicy.DYNAMIC)
+	@Reference(cardinality=ReferenceCardinality.MULTIPLE, policy=ReferencePolicy.DYNAMIC)
 	public void addCollection(CollectionInterface collection) {
 		if (!collections.contains(collection))
 			collections.add(collection);
@@ -127,6 +132,7 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 				playlist.load("file:///home/christoph/.bragi/Playlist/current.m3u");
 			}
 		}
+		reinitializePlaylist();
 		if (uiInitialized) {
 			getShell().getDisplay().asyncExec(()->{
 				if (playlistWidget!=null)
@@ -150,6 +156,10 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 		uiInitialized = false;
 		currentSongIndex = 0;
 		collections=new ArrayList<>();
+	}
+	
+	@Activate
+	public void activate() {
 		createActions();
 		addCoolBar(SWT.FLAT);
 		addMenuBar();
@@ -166,6 +176,11 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 						Files.createDirectory(dirPath);
 					Path playlistPath=dirPath.resolve("current.m3u");
 					playlist.save(playlistPath.toUri().toString());
+				}
+				if (engine!=null) {
+					uiInitialized=false;
+					Bundle bundle=FrameworkUtil.getBundle(engine.get().getClass());
+					bundle.stop();
 				}
 				System.exit(0);
 			} catch (Exception e) {
@@ -187,7 +202,7 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 		{
 			playlistWidget = new PlaylistWidget(container, SWT.NONE);
 			playlistWidget.setLayoutData(BorderLayout.EAST);
-			playlistWidget.setEngine(engine);
+			playlistWidget.setEngine(engine.get());
 			{
 				collectionWidget = new CollectionWidget(container, SWT.NONE);
 				collectionWidget.setLayoutData(BorderLayout.WEST);
@@ -203,8 +218,9 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 
 							@Override
 							public void mouseDown(MouseEvent e) {
-								if (engine!=null)
-									engine.backward();
+								EngineInterface engineObject=engine.get();
+								if (engineObject!=null)
+									engineObject.backward();
 								super.mouseDown(e);
 							}
 							
@@ -217,11 +233,12 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 
 							@Override
 							public void mouseDown(MouseEvent e) {
-								if (engine!=null) {
+								EngineInterface engineObject=engine.get();
+								if (engineObject!=null) {
 									if (playButton.getText().equals("Play"))
-										engine.play(currentSongIndex);
+										engineObject.play(currentSongIndex);
 									else
-										engine.pause();
+										engineObject.pause();
 									
 								}
 								super.mouseDown(e);
@@ -237,8 +254,9 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 
 							@Override
 							public void mouseDown(MouseEvent e) {
-								if (engine!=null)
-									engine.stop(true);
+								EngineInterface engineObject=engine.get();
+								if (engineObject!=null)
+									engineObject.stop(true);
 								super.mouseDown(e);
 							}
 							
@@ -252,10 +270,9 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 
 							@Override
 							public void mouseDown(MouseEvent e) {
-								if (engine!=null) {
-									engine.forward();
-									
-								}
+								EngineInterface engineObject=engine.get();
+								if (engineObject!=null)
+									engineObject.forward();
 								super.mouseDown(e);
 							}
 							
@@ -272,8 +289,9 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 
 							@Override
 							public void widgetSelected(SelectionEvent e) {
-								if (engine!=null)
-									engine.setVolume(volumeSlider.getSelection());
+								EngineInterface engineObject=engine.get();
+								if (engineObject!=null)
+									engineObject.setVolume(volumeSlider.getSelection());
 								volumeSlider.setToolTipText(String.valueOf(volumeSlider.getSelection()));
 								super.widgetSelected(e);
 							}
@@ -290,8 +308,29 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 		uiInitialized=true;
 		collections.forEach(this::addCollection);
 		setPlaylist(playlist);
-		setEngine(engine);
+		setEngine(engine.get());
 		return container;
+	}
+	
+	private void reinitializePlaylist() {
+		EngineInterface engineObject=engine.get();
+		if (engineObject!=null && playlist!=null) {
+			List<PlaylistEntry> playlistEntries=playlist.filter("SELECT ARTIST");
+			for (int i=playlistEntries.size()-1;i>=0;i--)
+				playlist.removeMedia(i);
+			// and now add the tracks again (and thus update all interested parties)
+			playlistEntries.stream().map(entry->entry.getUri().toString()).forEach(uri->{
+				try {
+					playlist.addMedia(uri);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}}
+			);
+			getShell().getDisplay().asyncExec(()->{
+				if (playlistWidget!=null)
+					playlistWidget.refresh();
+			});
+		}
 	}
 
 	/**
@@ -355,10 +394,7 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 	 * Update UI based on current state of the engine
 	 */
 	private void updateUi() {
-		getShell().getDisplay().asyncExec(new Runnable() {
-		
-			@Override
-			public void run() {
+		getShell().getDisplay().asyncExec(()->{
 				boolean isPlayingOrPaused = (currentState==EngineStateEnum.PAUSED) || (currentState==EngineStateEnum.PLAYING);
 				stopButton.setEnabled(isPlayingOrPaused);
 				nextButton.setEnabled(isPlayingOrPaused);
@@ -377,8 +413,6 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 					break;
 				case PLAYING:
 					playButton.setText("Pause");
-					if (engine!=null)
-						volumeSlider.setSelection(engine.getVolume());
 					break;
 				case UNLOADED:
 					break;
@@ -386,8 +420,6 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 					break;
 				
 				}
-				
-			}
 		});
 	}
 
@@ -396,7 +428,13 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 			EngineStateEnum newState, Object... eventData) {
 		if (seekWidget==null)
 			return;
-		if (newState == EngineStateEnum.PLAYING) {
+		if (engineEvent.equals(EngineInterface.VOLUME_CHANGED_EVENT)) {
+			getShell().getDisplay().asyncExec(()->{
+				int currentVolume=(int) eventData[0];
+				volumeSlider.setSelection(currentVolume);
+			});
+		}
+		else if (newState == EngineStateEnum.PLAYING) {
 			if (engineEvent.equals(EngineInterface.BACKWARD_EVENT) || engineEvent.equals(EngineInterface.FORWARD_EVENT) || engineEvent.equals(EngineInterface.JUMP_EVENT)) {
 				int songIndex=(int) eventData[0];
 				playlistWidget.setCurrentSongIndex(songIndex);
