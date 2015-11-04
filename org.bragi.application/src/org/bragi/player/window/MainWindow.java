@@ -11,11 +11,14 @@
  */
 package org.bragi.player.window;
 
+import java.io.File;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Vector;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.bragi.collection.CollectionInterface;
@@ -25,19 +28,21 @@ import org.bragi.player.statemachines.EngineStateEnum;
 import org.bragi.player.widgets.CollectionWidget;
 import org.bragi.player.widgets.PlaylistWidget;
 import org.bragi.player.widgets.SeekWidget;
-import org.bragi.playlist.PlaylistEntry;
 import org.bragi.playlist.PlaylistInterface;
 import org.eclipse.jface.action.CoolBarManager;
 import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.StatusLineManager;
 import org.eclipse.jface.window.ApplicationWindow;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.SashForm;
 import org.eclipse.swt.events.MouseAdapter;
 import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.layout.FillLayout;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
@@ -51,18 +56,22 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
+import org.osgi.service.event.Event;
+import org.osgi.service.event.EventAdmin;
+import org.osgi.service.event.EventHandler;
 
-import swing2swt.layout.BorderLayout;
+@Component(property="event.topics=org/bragi/playlist/event/*",immediate = true)
+public class MainWindow extends ApplicationWindow implements EngineStateChangeListener, EventHandler {
 
-@Component(immediate=true) 
-public class MainWindow extends ApplicationWindow implements EngineStateChangeListener { 
- 
-	
+	private static final String PLAYLIST_FILEPATH = "file:///home/christoph/.bragi/Playlist/current.m3u";
+
 	private Thread thread;
-	
-	private final AtomicReference<EngineInterface> engine=new AtomicReference<>();
+
+	private final AtomicReference<EngineInterface> engine = new AtomicReference<>();
 	private List<CollectionInterface> collections;
-	private PlaylistInterface playlist;
+	private final AtomicReference<PlaylistInterface> playlist = new AtomicReference<>();
+	private Vector<Event> playlistEventList;
+	private final AtomicReference<EventAdmin> eventAdmin = new AtomicReference<>();
 
 	private Composite container;
 	private Composite engineComposite;
@@ -74,79 +83,90 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 	private EngineStateEnum currentState;
 	private Slider volumeSlider;
 	private boolean uiInitialized;
-	
+
 	private SeekWidget seekWidget;
 	private CollectionWidget collectionWidget;
 	private PlaylistWidget playlistWidget;
+	private SashForm sashForm;
+	private Composite composite;
 	
-	@Reference(cardinality=ReferenceCardinality.OPTIONAL, policy=ReferencePolicy.DYNAMIC)
+	@Reference
+	public void setEventAdmin(EventAdmin pEventAdmin) {
+		eventAdmin.set(pEventAdmin);
+	}
+	
+	public void unsetEventAdmin(EventAdmin pEventAdmin) {
+		eventAdmin.compareAndSet(pEventAdmin, null);
+	}
+
+	@Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
 	public void setEngine(EngineInterface pEngine) {
 		engine.set(pEngine);
 		if (uiInitialized) {
-			getShell().getDisplay().asyncExec(()->{
-				if (playlistWidget!=null)
+			getShell().getDisplay().asyncExec(() -> {
+				if (playlistWidget != null)
 					playlistWidget.setEngine(pEngine);
 			});
 		}
-		currentState=EngineStateEnum.LOADED;
-		reinitializePlaylist();
+		currentState = EngineStateEnum.LOADED;
+		EventAdmin eventAdminObject=eventAdmin.get();
+		if (eventAdminObject!=null)
+			playlistEventList.stream().forEach(eventAdminObject::postEvent);
 	}
-	
+
 	public void unsetEngine(EngineInterface pEngine) {
 		if (engine.compareAndSet(pEngine, null) && uiInitialized) {
-			getShell().getDisplay().asyncExec(()->{
-				if (playlistWidget!=null)
+			getShell().getDisplay().asyncExec(() -> {
+				if (playlistWidget != null)
 					playlistWidget.setEngine(null);
 			});
-			currentState=EngineStateEnum.UNLOADED;
+			currentState = EngineStateEnum.UNLOADED;
 		}
 	}
-	
-	@Reference(cardinality=ReferenceCardinality.MULTIPLE, policy=ReferencePolicy.DYNAMIC)
+
+	@Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
 	public void addCollection(CollectionInterface collection) {
 		if (!collections.contains(collection))
 			collections.add(collection);
 		if (uiInitialized) {
-			getShell().getDisplay().asyncExec(()->{
-				if (collectionWidget!=null)
+			getShell().getDisplay().asyncExec(() -> {
+				if (collectionWidget != null)
 					collectionWidget.addCollection(collection);
 			});
 		}
 	}
-	
+
 	public void removeCollection(CollectionInterface collection) {
 		collections.remove(collection);
 		if (uiInitialized) {
-			getShell().getDisplay().asyncExec(()->{
-				if (collectionWidget!=null)
+			getShell().getDisplay().asyncExec(() -> {
+				if (collectionWidget != null)
 					collectionWidget.removeCollection(collection);
 			});
 		}
 	}
-	
-	@Reference(cardinality=ReferenceCardinality.OPTIONAL, policy=ReferencePolicy.DYNAMIC)
+
+	@Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
 	public void setPlaylist(PlaylistInterface pPlaylist) {
-		if (playlist!=pPlaylist) {
-			playlist=pPlaylist;
-			if (playlist!=null) {
-				playlist.load("file:///home/christoph/.bragi/Playlist/current.m3u");
-			}
+		if (pPlaylist!=null) {
+			playlist.set(pPlaylist);
+			URI uri=URI.create(PLAYLIST_FILEPATH);
+			File playlistPath=new File(uri);
+			if (playlistPath.exists())
+				playlist.get().load(PLAYLIST_FILEPATH);
 		}
-		reinitializePlaylist();
 		if (uiInitialized) {
-			getShell().getDisplay().asyncExec(()->{
-				if (playlistWidget!=null)
+			getShell().getDisplay().asyncExec(() -> {
+				if (playlistWidget != null)
 					playlistWidget.setPlaylist(pPlaylist);
 			});
 		}
 	}
-	
-	
-	
+
 	public void unsetPlaylist(PlaylistInterface pPlaylist) {
-		setPlaylist(pPlaylist);
+		if (playlist.compareAndSet(pPlaylist, null))
+			setPlaylist(null);
 	}
-	
 
 	/**
 	 * Create the application window,
@@ -155,9 +175,10 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 		super(null);
 		uiInitialized = false;
 		currentSongIndex = 0;
-		collections=new ArrayList<>();
+		collections = new ArrayList<>();
+		playlistEventList=new Vector<>();
 	}
-	
+
 	@Activate
 	public void activate() {
 		createActions();
@@ -175,9 +196,9 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 					if (!Files.exists(dirPath))
 						Files.createDirectory(dirPath);
 					Path playlistPath=dirPath.resolve("current.m3u");
-					playlist.save(playlistPath.toUri().toString());
+					playlist.get().save(playlistPath.toUri().toString());
 				}
-				if (engine!=null) {
+				if (engine.get()!=null) {
 					uiInitialized=false;
 					Bundle bundle=FrameworkUtil.getBundle(engine.get().getClass());
 					bundle.stop();
@@ -198,141 +219,127 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 	@Override
 	protected Control createContents(Composite parent) {
 		container = new Composite(parent, SWT.NONE);
-		container.setLayout(new BorderLayout(0, 0));
+		container.setLayout(new FillLayout(SWT.VERTICAL));
 		{
-			playlistWidget = new PlaylistWidget(container, SWT.NONE);
-			playlistWidget.setLayoutData(BorderLayout.EAST);
-			playlistWidget.setEngine(engine.get());
 			{
-				collectionWidget = new CollectionWidget(container, SWT.NONE);
-				collectionWidget.setLayoutData(BorderLayout.WEST);
 				{
-					engineComposite = new Composite(container, SWT.NONE);
-					engineComposite.setLayoutData(BorderLayout.SOUTH);
-					engineComposite.setLayout(new FillLayout(SWT.HORIZONTAL));
 					{
-						previousButton = new Button(engineComposite, SWT.NONE);
-						previousButton.setEnabled(false);
-						previousButton.setText("<");
-						previousButton.addMouseListener(new MouseAdapter() {
-
-							@Override
-							public void mouseDown(MouseEvent e) {
-								EngineInterface engineObject=engine.get();
-								if (engineObject!=null)
-									engineObject.backward();
-								super.mouseDown(e);
+						{
+							composite = new Composite(container, SWT.NONE);
+							composite.setLayout(new GridLayout(1, false));
+							seekWidget = new SeekWidget(composite, SWT.NONE);
+							seekWidget.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
+							seekWidget.setSize(168, 15);
+							{
+								sashForm = new SashForm(composite, SWT.NONE);
+								sashForm.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 1, 1));
+								sashForm.setSize(639, 43);
+								collectionWidget = new CollectionWidget(sashForm, SWT.NONE);
+								playlistWidget = new PlaylistWidget(sashForm, SWT.NONE);
+								playlistWidget.setEngine(engine.get());
+								sashForm.setWeights(new int[] {1, 1});
 							}
-							
-						});
-					}
-					{
-						playButton = new Button(engineComposite, SWT.NONE);
-						playButton.setText("Play");
-						playButton.addMouseListener(new MouseAdapter() {
+							engineComposite = new Composite(composite, SWT.NONE);
+							engineComposite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, false, false, 1, 1));
+							engineComposite.setSize(420, 27);
+							engineComposite.setLayout(new FillLayout(SWT.HORIZONTAL));
+							{
+								previousButton = new Button(engineComposite, SWT.NONE);
+								previousButton.setEnabled(false);
+								previousButton.setText("<");
+								previousButton.addMouseListener(new MouseAdapter() {
 
-							@Override
-							public void mouseDown(MouseEvent e) {
-								EngineInterface engineObject=engine.get();
-								if (engineObject!=null) {
-									if (playButton.getText().equals("Play"))
-										engineObject.play(currentSongIndex);
-									else
-										engineObject.pause();
+									@Override
+									public void mouseDown(MouseEvent e) {
+										EngineInterface engineObject=engine.get();
+										if (engineObject!=null)
+											engineObject.backward();
+										super.mouseDown(e);
+									}
+								});
+							{
+								playButton = new Button(engineComposite, SWT.NONE);
+								playButton.setText("Play");
+								playButton.addMouseListener(new MouseAdapter() {
+
+									@Override
+									public void mouseDown(MouseEvent e) {
+										EngineInterface engineObject=engine.get();
+										if (engineObject!=null) {
+											if (playButton.getText().equals("Play"))
+												engineObject.play(currentSongIndex);
+											else
+												engineObject.pause();
+										}
+									}
 									
-								}
-								super.mouseDown(e);
-							}
+								});
 							
-						});
-					}
-					{
-						stopButton = new Button(engineComposite, SWT.NONE);
-						stopButton.setEnabled(false);
-						stopButton.setText("Stop");
-						stopButton.addMouseListener(new MouseAdapter() {
+							{
+								stopButton = new Button(engineComposite, SWT.NONE);
+								stopButton.setEnabled(false);
+								stopButton.setText("Stop");
+								stopButton.addMouseListener(new MouseAdapter() {
 
-							@Override
-							public void mouseDown(MouseEvent e) {
-								EngineInterface engineObject=engine.get();
-								if (engineObject!=null)
-									engineObject.stop(true);
-								super.mouseDown(e);
-							}
-							
-						});
-					}
-					{
-						nextButton = new Button(engineComposite, SWT.NONE);
-						nextButton.setEnabled(false);
-						nextButton.setText(">");
-						nextButton.addMouseListener(new MouseAdapter() {
+									@Override
+									public void mouseDown(MouseEvent e) {
+										EngineInterface engineObject=engine.get();
+										if (engineObject!=null)
+											engineObject.stop(true);
+										super.mouseDown(e);
+									}
+								});
+							{
+								nextButton = new Button(engineComposite, SWT.NONE);
+								nextButton.setEnabled(false);
+								nextButton.setText(">");
+								nextButton.addMouseListener(new MouseAdapter() {
 
-							@Override
-							public void mouseDown(MouseEvent e) {
-								EngineInterface engineObject=engine.get();
-								if (engineObject!=null)
-									engineObject.forward();
-								super.mouseDown(e);
-							}
+									@Override
+									public void mouseDown(MouseEvent e) {
+										EngineInterface engineObject=engine.get();
+										if (engineObject!=null)
+											engineObject.forward();
+										super.mouseDown(e);
+									}
+								});
+								volumeSlider = new Slider(engineComposite, SWT.NONE);
+								volumeSlider.setMinimum(0);
+								volumeSlider.setMaximum(200);
+								volumeSlider.setThumb(1);
+								volumeSlider.setIncrement(1);
+								volumeSlider.setPageIncrement(10);
+								volumeSlider.addSelectionListener(new SelectionAdapter() {
+	
+									@Override
+									public void widgetSelected(SelectionEvent e) {
+										EngineInterface engineObject=engine.get();
+										if (engineObject!=null)
+											engineObject.setVolume(volumeSlider.getSelection());
+										volumeSlider.setToolTipText(String.valueOf(volumeSlider.getSelection()));
+										super.widgetSelected(e);
+									}
 							
-						});
-					}
-					{
-						volumeSlider = new Slider(engineComposite, SWT.NONE);
-						volumeSlider.setMinimum(0);
-						volumeSlider.setMaximum(200);
-						volumeSlider.setThumb(1);
-						volumeSlider.setIncrement(1);
-						volumeSlider.setPageIncrement(10);
-						volumeSlider.addSelectionListener(new SelectionAdapter() {
-
-							@Override
-							public void widgetSelected(SelectionEvent e) {
-								EngineInterface engineObject=engine.get();
-								if (engineObject!=null)
-									engineObject.setVolume(volumeSlider.getSelection());
-								volumeSlider.setToolTipText(String.valueOf(volumeSlider.getSelection()));
-								super.widgetSelected(e);
+								});
 							}
-							
-						});
+							}
+							}
+							}
+						}
 					}
 				}
 			}
-			seekWidget = new SeekWidget(container, SWT.NONE);
-			seekWidget.setLayoutData(BorderLayout.NORTH);
-			seekWidget.layout();
 		}
 		// make sure the sub-widgets are correctly initialized
 		uiInitialized=true;
 		collections.forEach(this::addCollection);
-		setPlaylist(playlist);
-		setEngine(engine.get());
+		playlistWidget.setPlaylist(playlist.get());
+		playlistWidget.setEngine(engine.get());
+//		setPlaylist(playlist.get());
+//		setEngine(engine.get());
 		return container;
 	}
 	
-	private void reinitializePlaylist() {
-		EngineInterface engineObject=engine.get();
-		if (engineObject!=null && playlist!=null) {
-			List<PlaylistEntry> playlistEntries=playlist.filter("SELECT ARTIST");
-			for (int i=playlistEntries.size()-1;i>=0;i--)
-				playlist.removeMedia(i);
-			// and now add the tracks again (and thus update all interested parties)
-			playlistEntries.stream().map(entry->entry.getUri().toString()).forEach(uri->{
-				try {
-					playlist.addMedia(uri);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}}
-			);
-			getShell().getDisplay().asyncExec(()->{
-				if (playlistWidget!=null)
-					playlistWidget.refresh();
-			});
-		}
-	}
-
 	/**
 	 * Create the actions.
 	 */
@@ -460,5 +467,10 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 		this.currentState=newState;
 		updateUi();
 		
+	}
+
+	@Override
+	public void handleEvent(Event event) {
+		playlistEventList.add(event);
 	}
 }
