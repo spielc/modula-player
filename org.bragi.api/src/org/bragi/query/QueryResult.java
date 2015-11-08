@@ -15,7 +15,6 @@ import java.net.URI;
 import java.util.Map;
 
 import org.bragi.metadata.MetaDataEnum;
-import org.bragi.playlist.PlaylistEntry;
 
 /**
  * @author christoph
@@ -48,7 +47,7 @@ public class QueryResult {
 
 	@Override
 	public boolean equals(Object other) {
-		if (other==null || !(other instanceof PlaylistEntry))
+		if (other==null || !(other instanceof QueryResult))
 			return false;
 		return uri.equals(((QueryResult)other).uri);
 	}

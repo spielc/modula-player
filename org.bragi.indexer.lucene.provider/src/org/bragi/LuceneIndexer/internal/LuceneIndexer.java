@@ -32,7 +32,6 @@ import org.apache.lucene.search.SearcherFactory;
 import org.apache.lucene.search.SearcherManager;
 import org.apache.lucene.search.TopScoreDocCollector;
 import org.apache.lucene.store.Directory;
-import org.apache.lucene.util.Version;
 import org.bragi.metadata.MetaDataEnum;
 import org.bragi.metadata.MetaDataProviderInterface;
 
@@ -52,7 +51,7 @@ public class LuceneIndexer {
 	public LuceneIndexer(Directory directory) {
 		try {
 			StandardAnalyzer analyzer = new StandardAnalyzer();
-			IndexWriterConfig indexWriterConfig = new IndexWriterConfig(Version.LATEST, analyzer);
+			IndexWriterConfig indexWriterConfig = new IndexWriterConfig(analyzer);
 			indexWriterConfig.setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND);
 			indexWriter = new IndexWriter(directory, indexWriterConfig);
 			queryParser = new QueryParser(URICONSTANT, indexWriter.getAnalyzer());
@@ -151,7 +150,7 @@ public class LuceneIndexer {
 		
 		try {
 			Query q = queryParser.parse(query);
-			TopScoreDocCollector collector = TopScoreDocCollector.create(5000, true);
+			TopScoreDocCollector collector = TopScoreDocCollector.create(5000);
 			searcher.search(q, collector);
 			for (ScoreDoc hit : collector.topDocs().scoreDocs) {
 				int docId = hit.doc;

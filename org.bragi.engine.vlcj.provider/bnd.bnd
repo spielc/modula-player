@@ -17,10 +17,10 @@ Private-Package: \
 -buildpath: \
 	osgi.enroute.base.api;version=1.0,\
 	biz.aQute.junit,\
-	org.mockito.mockito-all;version=2.0.2.beta,\
 	vlcj-2.4.1,\
 	org.bragi.api,\
-	com.sun.jna;version=3.0
+	com.sun.jna;version=3.0,\
+	org.mockito.mockito-all
 
 -includeresource: {readme.md}
 
