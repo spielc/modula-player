@@ -18,10 +18,10 @@ Private-Package: \
 	osgi.enroute.base.api;version=1.0,\
 	biz.aQute.junit,\
 	org.bragi.api;version=latest,\
-	org.mockito.mockito-all;version=2.0.2.beta,\
-	org.apache.servicemix.bundles.lucene;version=4.10.2.1,\
-	org.apache.servicemix.bundles.lucene-queryparser;version=4.10.2.1,\
-	org.apache.servicemix.bundles.lucene-analyzers-common;version=4.10.2.1
+	org.mockito.mockito-all,\
+	org.apache.servicemix.bundles.lucene-queryparser;version=5.2,\
+	org.apache.servicemix.bundles.lucene-analyzers-common;version=5.2,\
+	org.apache.servicemix.bundles.lucene;version=5.2
 
 -includeresource: {readme.md}
 
@@ -31,6 +31,4 @@ Private-Package: \
 	
 -runbundles: \
 	${error;Resolve first}
-Export-Package: \
-	org.bragi.indexer,\
-	org.bragi.query
+Export-Package: org.bragi.indexer

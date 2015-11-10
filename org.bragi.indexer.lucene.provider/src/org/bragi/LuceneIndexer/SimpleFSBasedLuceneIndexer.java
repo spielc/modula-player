@@ -11,8 +11,9 @@
  */
 package org.bragi.LuceneIndexer;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Map;
 
 import org.apache.lucene.store.SimpleFSDirectory;
@@ -46,7 +47,7 @@ public class SimpleFSBasedLuceneIndexer extends AbstractLuceneIndexer implements
 	@Modified
 	public void modified(Map<String,Object> props) {
 		try {
-			File path=new File(props.get("path").toString());
+			Path path=Paths.get(props.get("path").toString());
 			indexer=new LuceneIndexer(new SimpleFSDirectory(path));
 			indexer.setMetaDataProvider(metaDataProvider);
 		} catch (IOException e) {
