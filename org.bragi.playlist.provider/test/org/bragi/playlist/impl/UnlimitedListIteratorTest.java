@@ -9,13 +9,12 @@
  * Lesser General Public License along with this program. If not, see
  * <http://www.gnu.org/licenses/>
  */
-package org.bragi.engine.vlc.internal.test;
+package org.bragi.playlist.impl;
 
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import org.bragi.engine.vlc.internal.UnlimitedListIterator;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;

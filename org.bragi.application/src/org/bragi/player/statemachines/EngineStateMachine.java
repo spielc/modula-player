@@ -78,10 +78,8 @@ public class EngineStateMachine implements EventHandler {
 			break;
 		case EngineInterface.FORWARD_EVENT:
 		case EngineInterface.BACKWARD_EVENT:
-		case EngineInterface.JUMP_EVENT:
 			if (currentState==EngineStateEnum.PLAYING)
 				newState=EngineStateEnum.PLAYING;
-			eventData.add(event.getProperty(EngineInterface.CURRENT_INDEX));
 			currentSongFinished=true;
 			break;
 		case EngineInterface.DURATION_CHANGED_EVENT:

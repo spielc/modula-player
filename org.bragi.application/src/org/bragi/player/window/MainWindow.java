@@ -58,10 +58,9 @@ import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
-import org.osgi.service.event.EventHandler;
 
 @Component(property="event.topics=org/bragi/playlist/event/*",immediate = true)
-public class MainWindow extends ApplicationWindow implements EngineStateChangeListener, EventHandler {
+public class MainWindow extends ApplicationWindow implements EngineStateChangeListener {//, EventHandler {
 
 	private static final String PLAYLIST_FILEPATH = "file:///home/christoph/.bragi/Playlist/current.m3u";
 
@@ -83,6 +82,7 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 	private EngineStateEnum currentState;
 	private Slider volumeSlider;
 	private boolean uiInitialized;
+	private boolean manualTrackChange;
 
 	private SeekWidget seekWidget;
 	private CollectionWidget collectionWidget;
@@ -93,10 +93,21 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 	@Reference
 	public void setEventAdmin(EventAdmin pEventAdmin) {
 		eventAdmin.set(pEventAdmin);
+		if (uiInitialized) {
+			getShell().getDisplay().asyncExec(() -> {
+				if (playlistWidget != null)
+					playlistWidget.setEventAdmin(pEventAdmin);
+			});
+		}
 	}
 	
 	public void unsetEventAdmin(EventAdmin pEventAdmin) {
-		eventAdmin.compareAndSet(pEventAdmin, null);
+		if (eventAdmin.compareAndSet(pEventAdmin, null) && uiInitialized) {
+			getShell().getDisplay().asyncExec(() -> {
+				if (playlistWidget != null)
+					playlistWidget.setEventAdmin(null);
+			});
+		}
 	}
 
 	@Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
@@ -252,8 +263,10 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 									@Override
 									public void mouseDown(MouseEvent e) {
 										EngineInterface engineObject=engine.get();
-										if (engineObject!=null)
+										if (engineObject!=null) {
+											manualTrackChange=true;
 											engineObject.backward();
+										}
 										super.mouseDown(e);
 									}
 								});
@@ -266,8 +279,23 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 									public void mouseDown(MouseEvent e) {
 										EngineInterface engineObject=engine.get();
 										if (engineObject!=null) {
-											if (playButton.getText().equals("Play"))
-												engineObject.play(currentSongIndex);
+											if (playButton.getText().equals("Play")) {
+												PlaylistInterface playlistObject=playlist.get();
+												if (playlistObject!=null) {
+													switch(currentState) {
+													case LOADED:
+														engineObject.forward();
+														break;
+													case PAUSED:
+														engineObject.play();
+														break;
+													default:
+														break;
+													}
+													
+												}
+												
+											}
 											else
 												engineObject.pause();
 										}
@@ -285,7 +313,7 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 									public void mouseDown(MouseEvent e) {
 										EngineInterface engineObject=engine.get();
 										if (engineObject!=null)
-											engineObject.stop(true);
+											engineObject.stop();
 										super.mouseDown(e);
 									}
 								});
@@ -298,8 +326,10 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 									@Override
 									public void mouseDown(MouseEvent e) {
 										EngineInterface engineObject=engine.get();
-										if (engineObject!=null)
+										if (engineObject!=null) {
+											manualTrackChange=true;
 											engineObject.forward();
+										}
 										super.mouseDown(e);
 									}
 								});
@@ -335,8 +365,7 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 		collections.forEach(this::addCollection);
 		playlistWidget.setPlaylist(playlist.get());
 		playlistWidget.setEngine(engine.get());
-//		setPlaylist(playlist.get());
-//		setEngine(engine.get());
+		playlistWidget.setEventAdmin(eventAdmin.get());
 		return container;
 	}
 	
@@ -442,13 +471,16 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 			});
 		}
 		else if (newState == EngineStateEnum.PLAYING) {
-			if (engineEvent.equals(EngineInterface.BACKWARD_EVENT) || engineEvent.equals(EngineInterface.FORWARD_EVENT) || engineEvent.equals(EngineInterface.JUMP_EVENT)) {
-				int songIndex=(int) eventData[0];
-				playlistWidget.setCurrentSongIndex(songIndex);
-				currentSongIndex=songIndex;
-			}
+			if (engineEvent.equals(EngineInterface.BACKWARD_EVENT))
+				playlistWidget.backward();
+			else if (engineEvent.equals(EngineInterface.FORWARD_EVENT))
+				playlistWidget.forward();
 			else if (engineEvent.equals(EngineInterface.DURATION_CHANGED_EVENT)) {
 				try {
+					if (!manualTrackChange)
+						playlistWidget.forward();
+					else
+						manualTrackChange=false;
 					int songDuration = (int) eventData[0];
 					seekWidget.durationChanged(songDuration);
 				} catch (Exception e) {
@@ -469,8 +501,8 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 		
 	}
 
-	@Override
-	public void handleEvent(Event event) {
-		playlistEventList.add(event);
-	}
+//	@Override
+//	public void handleEvent(Event event) {
+//		playlistEventList.add(event);
+//	}
 }

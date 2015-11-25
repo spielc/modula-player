@@ -36,12 +36,10 @@ public interface PlaylistInterface {
 	public void shuffle();
 	public void save(String uri);
 	public void load(String uri);
-	// TODO Because a playlist may contain a certain URI multiple times
 	public List<PlaylistEntry> filter(String query);
+	public void playMedia(int index);
 	
-	//methods for getting and setting repeat and random-state of the playlist
+	//methods for getting and setting repeat-state of the playlist
 	public boolean getRepeat();
 	public void setRepeat(boolean repeat);
-	public boolean getRandom();
-	public void setRandom(boolean random);
 }

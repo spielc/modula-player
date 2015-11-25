@@ -50,11 +50,13 @@ import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MenuItem;
 import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableColumn;
+import org.osgi.service.event.EventAdmin;
 
 public class PlaylistWidget extends Composite {
 	
 	private int currentSongIndex;
 	private EngineStateEnum currentState;
+	private EventAdmin eventAdmin;
 	private Table playlistTable;
 	private TableViewer playlistTableViewer;
 	private PlaylistInterface playlist;
@@ -62,7 +64,6 @@ public class PlaylistWidget extends Composite {
 	private EngineInterface engine;
 	private UriDragListener dragListener;
 	private MenuItem mntmRepeat;
-	private MenuItem mntmRandom;
 	
 	private class PlaylistTableLabelProvider extends ColumnLabelProvider implements ITableLabelProvider {
 		
@@ -119,6 +120,7 @@ public class PlaylistWidget extends Composite {
 	public PlaylistWidget(Composite parent, int style) {
 		super(parent, style);
 		setLayout(new FillLayout());
+		currentSongIndex=-1;
 		playlistTableViewer = new TableViewer(this, SWT.BORDER | SWT.FULL_SELECTION | SWT.MULTI);
 		dragListener=new UriDragListener(this::getPlaylistTableViewerDragSourceEventData);
 		dropAdapter = new UriDropAdapter(playlistTableViewer);
@@ -151,12 +153,6 @@ public class PlaylistWidget extends Composite {
 			playlist.setRepeat(mntmRepeat.getSelection());
 		});
 		
-		mntmRandom = new MenuItem(menu_1, SWT.CHECK);
-		mntmRandom.setText("Random");
-		mntmRandom.addListener(SWT.Selection, event -> {
-			playlist.setRandom(mntmRandom.getSelection());
-		});
-		
 		for (MetaDataEnum metaData : EnumSet.of(MetaDataEnum.TITLE, MetaDataEnum.ARTIST, MetaDataEnum.ALBUM)) {
 			TableViewerColumn tableViewerColumn = new TableViewerColumn(playlistTableViewer, SWT.NONE);
 			TableColumn tblclmnExamplecolumn = tableViewerColumn.getColumn();
@@ -169,9 +165,9 @@ public class PlaylistWidget extends Composite {
 
 			@Override
 			public void doubleClick(DoubleClickEvent event) {
-				currentSongIndex=playlistTable.getSelectionIndex();
-				if (engine!=null)
-					engine.play(currentSongIndex);
+				currentSongIndex=playlistTable.getSelectionIndex()-1;
+				if (null!=playlist)
+					playlist.playMedia(currentSongIndex+1);
 			}
 			
 		});
@@ -181,7 +177,7 @@ public class PlaylistWidget extends Composite {
 			public void keyReleased(KeyEvent e) {
 				if (e.keyCode==SWT.DEL)
 				{
-					if (playlist!=null) {
+					if (null!=playlist) {
 						int i=0;
 						for (int selectedIndex : playlistTable.getSelectionIndices())
 							playlist.removeMedia(selectedIndex-(i++));
@@ -200,7 +196,6 @@ public class PlaylistWidget extends Composite {
 		playlistTableViewer.refresh();
 		if (playlist!=null) {
 			mntmRepeat.setSelection(playlist.getRepeat());
-			mntmRandom.setSelection(playlist.getRandom());
 		}
 	}
 	
@@ -208,8 +203,16 @@ public class PlaylistWidget extends Composite {
 		engine=pEngine;
 	}
 	
-	public void setCurrentSongIndex(int currentSongIndex) {
-		this.currentSongIndex = currentSongIndex;
+	public void setEventAdmin(EventAdmin pEventAdmin) {
+		eventAdmin=pEventAdmin;
+	}
+	
+	public void forward() {
+		currentSongIndex++;
+	}
+	
+	public void backward() {
+		currentSongIndex--;
 	}
 
 	public void setCurrentState(EngineStateEnum currentState) {

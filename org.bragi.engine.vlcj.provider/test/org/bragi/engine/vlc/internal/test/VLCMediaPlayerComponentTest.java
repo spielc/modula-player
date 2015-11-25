@@ -26,9 +26,8 @@ import org.junit.experimental.categories.Category;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
 
-import uk.co.caprica.vlcj.medialist.MediaList;
 import uk.co.caprica.vlcj.mrl.FileMrl;
-import uk.co.caprica.vlcj.player.list.MediaListPlayer;
+import uk.co.caprica.vlcj.player.MediaPlayer;
 
 /**
  * @author christoph
@@ -40,16 +39,11 @@ public class VLCMediaPlayerComponentTest {
 	public static final String MP3URL=new FileMrl().file(VLCMediaPlayerComponentTest.class.getClassLoader().getResource("test.mp3").getPath()).value();
 	
 	private VLCMediaPlayerComponent component;
-	private MediaList playList;
-	private MediaListPlayer player;
 	private EventAdmin admin;
 	
 	@Before
 	public void initTest() {
 		component=new VLCMediaPlayerComponent();
-		player=component.getMediaListPlayer();
-		playList=component.getMediaList();
-		playList.addMedia(MP3URL);
 		admin=mock(EventAdmin.class);
 		component.setEventAdmin(admin);
 	}
@@ -57,7 +51,10 @@ public class VLCMediaPlayerComponentTest {
 	@Test
 	public void testFinished() {
 		try {
-			player.play();
+			MediaPlayer player=component.getMediaPlayer();
+			player.mute();
+			player.playMedia(MP3URL);
+			Thread.sleep(100);
 			while (player.isPlaying())
 				Thread.sleep(1000);
 			verify(admin,times(1)).postEvent(new Event(EngineInterface.FINISHED_EVENT,(Map<String,Object>)null));

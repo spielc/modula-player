@@ -23,18 +23,17 @@ public interface EngineInterface {
 	public static final String FORWARD_EVENT = "org/bragi/engine/event/FORWARD";
 	public static final String BACKWARD_EVENT = "org/bragi/engine/event/BACKWARD";
 	public static final String FINISHED_EVENT = "org/bragi/engine/event/FINISHED";
-	public static final String JUMP_EVENT = "org/bragi/engine/event/JUMPED";
 	public static final String DURATION_CHANGED_EVENT = "org/bragi/engine/event/DURATION_CHANGED";
 	public static final String NOOP_EVENT = "org/bragi/engine/event/NOOP";
 	public static final String VOLUME_CHANGED_EVENT = "org/bragi/engine/event/VOLUME_CHANGED";
 	//event-property ids for engine-events
-	public static final String CURRENT_INDEX = "CurrentIndex";
 	public static final String CURRENT_DURATION = "CurrentDuration";
 	public static final String CURRENT_VOLUME = "CurrentVolume";
 	//Playback methods
-	public void play(int itemIndex);
+	public void play(String url);
+	public void play();
 	public void pause();
-	public void stop(boolean immediately);
+	public void stop();
 	public void forward();
 	public void backward();
 	public void seek(long milliseconds);

@@ -11,36 +11,20 @@
  */
 package org.bragi.engine.vlc.internal;
 
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import org.bragi.engine.EngineInterface;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
 
-import uk.co.caprica.vlcj.component.AudioMediaListPlayerComponent;
+import uk.co.caprica.vlcj.component.AudioMediaPlayerComponent;
 import uk.co.caprica.vlcj.player.MediaPlayer;
 
-public class VLCMediaPlayerComponent extends AudioMediaListPlayerComponent {
+public class VLCMediaPlayerComponent extends AudioMediaPlayerComponent {
 
 	private EventAdmin eventAdmin;
-	private int currentIndex;
-	private UnlimitedListIterator songOrderIterator;
-	private boolean isRandomPlayback;
-	private boolean isRepeated;
 		
-	public VLCMediaPlayerComponent() {
-		super();
-		currentIndex=-1;
-		isRandomPlayback=false;
-		isRepeated=false;
-	}
-	
 	public void setEventAdmin(EventAdmin pEventAdmin) {
 		eventAdmin=pEventAdmin;
 	}
@@ -50,7 +34,6 @@ public class VLCMediaPlayerComponent extends AudioMediaListPlayerComponent {
 	
 	@Override
 	public void finished(MediaPlayer mediaPlayer) {
-		changeSong(songOrderIterator::next);
 		postEvent(new Event(EngineInterface.FINISHED_EVENT,(Map<String,Object>)null));
 	}
 
@@ -80,69 +63,11 @@ public class VLCMediaPlayerComponent extends AudioMediaListPlayerComponent {
 		System.out.println("error occured");
 	}
 	
-	public void backward() {
-		changeSong(songOrderIterator::previous);
-	}
-	
-	public void forward() {
-		changeSong(songOrderIterator::next);
-	}
-	
-	private void changeSong(Supplier<Integer> newIndexSupplier) {
-		int newIndex=newIndexSupplier.get();
-		getMediaListPlayer().playItem(newIndex);
-		postNavigateEvents(currentIndex, newIndex);
-		currentIndex=newIndex;
-	}
-	
 	/**
 	 * Post the event to the evantad
 	 */
 	public void postEvent(Event event) {
 		if (eventAdmin!=null)
 			eventAdmin.postEvent(event);
-	}
-	
-	public void play(int pCurrentIndex) {
-		songOrderIterator.setCurrentIndex(pCurrentIndex);
-		currentIndex=pCurrentIndex;
-	}
-	
-	public void playlistChanged() {
-		List<Integer> tmpList = IntStream.range(0, getMediaList().size()).boxed().collect(Collectors.toList());
-		if (isRandomPlayback)
-			Collections.shuffle(tmpList);
-		songOrderIterator=new UnlimitedListIterator(tmpList);
-		songOrderIterator.setRepeated(isRepeated);
-	}
-	
-	/**
-	 * 
-	 * @param lastIndex
-	 * @param currentIndex
-	 */
-	private void postNavigateEvents(int lastIndex, int currentIndex) {
-		Map<String,Object> eventProperties=new HashMap<>();
-		eventProperties.put(EngineInterface.CURRENT_INDEX, currentIndex);
-		Event event=null;
-		if (Math.abs(lastIndex-currentIndex)>1)
-			event=new Event(EngineInterface.JUMP_EVENT,eventProperties);
-		else if (lastIndex<currentIndex)
-			event=new Event(EngineInterface.FORWARD_EVENT,eventProperties);
-		else if (lastIndex>currentIndex)
-			event=new Event(EngineInterface.BACKWARD_EVENT,eventProperties);
-		if (event!=null)			
-			postEvent(event);
-	}
-	
-	public void setRepeat(boolean repeat) {
-		isRepeated=repeat;
-		if (songOrderIterator!=null)
-			songOrderIterator.setRepeated(repeat);
-	}
-	
-	public void setRandom(boolean random) {
-		isRandomPlayback=random;
-		playlistChanged();
 	}
 }

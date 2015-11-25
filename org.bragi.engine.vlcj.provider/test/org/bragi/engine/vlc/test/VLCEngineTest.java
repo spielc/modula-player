@@ -7,14 +7,13 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import java.net.URI;
 import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.Map;
 
 import org.bragi.engine.EngineInterface;
 import org.bragi.engine.vlc.VLCEngine;
 import org.bragi.engine.vlc.test.helpers.LocalTest;
-import org.bragi.playlist.PlaylistInterface;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -38,20 +37,16 @@ public class VLCEngineTest {
 	@Before
 	public void initTest() {
 		engine=new VLCEngine();
-		engine.setVolume(0);
 		admin=mock(EventAdmin.class);
 		engine.setEventAdmin(admin);
-		URI uri=URI.create(MP3URL);
-		HashMap<String,Object> eventData=new HashMap<>();
-		eventData.put(PlaylistInterface.URI_EVENTDATA, uri);
-		Event addEvent=new Event(PlaylistInterface.ADD_EVENT,eventData);
-		engine.handleEvent(addEvent);
+		engine.activate(new Hashtable<String, Object>());
+		engine.setVolume(0);
 	}
 	
 	@Test
 	public void testPlay() {
 		try {
-			engine.play(0);
+			engine.play(MP3URL);
 			Thread.sleep(1000);
 			verify(admin,times(1)).postEvent(new Event(EngineInterface.PLAY_EVENT,(Map<String,Object>)null));
 		} catch (InterruptedException ie) {
@@ -62,7 +57,7 @@ public class VLCEngineTest {
 	@Test
 	public void testPause() {
 		try {
-			engine.play(0);
+			engine.play(MP3URL);
 			Thread.sleep(500);
 			engine.pause();
 			Thread.sleep(1000);
@@ -75,9 +70,9 @@ public class VLCEngineTest {
 	@Test
 	public void testStop() {
 		try {
-			engine.play(0);
+			engine.play(MP3URL);
 			Thread.sleep(500);
-			engine.stop(false);
+			engine.stop();
 			Thread.sleep(1000);
 			verify(admin,times(1)).postEvent(new Event(EngineInterface.STOP_EVENT,(Map<String,Object>)null));
 		} catch (InterruptedException ie) {
@@ -88,17 +83,11 @@ public class VLCEngineTest {
 	@Test
 	public void testForward() {
 		try {
-			URI uri=URI.create(MP3URL);
-			HashMap<String,Object> eventData=new HashMap<>();
-			eventData.put(PlaylistInterface.URI_EVENTDATA, uri);
-			Event addEvent=new Event(PlaylistInterface.ADD_EVENT,eventData);
-			engine.handleEvent(addEvent);
-			engine.play(0);
+			engine.play(MP3URL);
 			Thread.sleep(500);
 			engine.forward();
 			Thread.sleep(1000);
 			Map<String,Object> eventProperties=new HashMap<>();
-			eventProperties.put(EngineInterface.CURRENT_INDEX, 1);
 			verify(admin,times(1)).postEvent(new Event(EngineInterface.FORWARD_EVENT,eventProperties));
 		} catch (InterruptedException ie) {
 			ie.printStackTrace();
@@ -108,18 +97,11 @@ public class VLCEngineTest {
 	@Test
 	public void testBackward() {
 		try {
-			URI uri=URI.create(MP3URL);
-			HashMap<String,Object> eventData=new HashMap<>();
-			eventData.put(PlaylistInterface.URI_EVENTDATA, uri);
-			Event addEvent=new Event(PlaylistInterface.ADD_EVENT,eventData);
-			engine.handleEvent(addEvent);
-			engine.play(1);
+			engine.play(MP3URL);
 			Thread.sleep(500);
-			HashMap<String, Object> eventProperties = new HashMap<>();
 			engine.backward();
 			Thread.sleep(500);
-			eventProperties.clear();
-			eventProperties.put(EngineInterface.CURRENT_INDEX, 0);
+			HashMap<String, Object> eventProperties = new HashMap<>();
 			verify(admin,times(1)).postEvent(new Event(EngineInterface.BACKWARD_EVENT,eventProperties));
 		} catch (InterruptedException ie) {
 			ie.printStackTrace();

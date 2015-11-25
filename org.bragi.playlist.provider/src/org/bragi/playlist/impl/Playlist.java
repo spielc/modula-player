@@ -28,10 +28,14 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.bragi.engine.EngineInterface;
 import org.bragi.metadata.MetaDataEnum;
 import org.bragi.metadata.MetaDataProviderInterface;
 import org.bragi.playlist.PlaylistEntry;
@@ -45,6 +49,7 @@ import org.osgi.service.component.annotations.Modified;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
+import org.osgi.service.event.EventHandler;
 
 import christophedelory.content.Content;
 import christophedelory.playlist.Media;
@@ -58,8 +63,8 @@ import christophedelory.playlist.SpecificPlaylistProvider;
  * @author christoph
  *
  */
-@Component(name="org.bragi.playlist.impl.Playlist")
-public class Playlist implements PlaylistInterface {
+@Component(property="event.topics=org/bragi/engine/event/*",name="org.bragi.playlist.impl.Playlist")
+public class Playlist implements PlaylistInterface, EventHandler {
 	
 	private static final String COMPONENT_NAME = "org.bragi.playlist.impl.Playlist";
 
@@ -130,6 +135,8 @@ public class Playlist implements PlaylistInterface {
 	private MetaDataProviderInterface metaDataProvider;
 	private QueryParserInterface queryParser;
 	private ConfigurationAdmin configAdmin;
+	private final AtomicReference<EngineInterface> engine=new AtomicReference<>();
+	private UnlimitedListIterator playlistIterator;
 	
 	@Reference
 	public void setEventAdmin(EventAdmin pEventAdmin) {
@@ -163,6 +170,14 @@ public class Playlist implements PlaylistInterface {
 		queryParser=null;
 	}
 	
+	@Reference
+	public void setEngine(EngineInterface pEngineInterface) {
+		engine.set(pEngineInterface);;
+	}
+	public void unsetEngine(EngineInterface pEngineInterface) {
+		engine.compareAndSet(pEngineInterface, null);
+	}
+	
 	@Activate
 	void activate(Map<String,Object> map) {
 		playlist=new ArrayList<>();
@@ -192,6 +207,7 @@ public class Playlist implements PlaylistInterface {
 			entry.setUri(uriObject);
 			if (playlist.add(entry)) { //only post even if operation was successful
 				entry.setMetaData(createMetaData(uri));
+				playlistIterator=new UnlimitedListIterator(IntStream.range(0, playlist.size()).boxed().collect(Collectors.toList()));
 				postEvent(uriObject,PlaylistInterface.ADD_EVENT);
 			}
 		}
@@ -217,6 +233,7 @@ public class Playlist implements PlaylistInterface {
 	public void removeMedia(int index) {
 		if (index>=0 && index<playlist.size()) { //only do something if uri is not null and not empty
 			URI uriObject=playlist.remove(index).getUri();
+			playlistIterator=new UnlimitedListIterator(IntStream.range(0, playlist.size()).boxed().collect(Collectors.toList()));
 			postEvent(uriObject,PlaylistInterface.REMOVE_EVENT);
 		}
 	}
@@ -234,6 +251,7 @@ public class Playlist implements PlaylistInterface {
 			playlist.add(index, entry);
 			if (oldSize!=playlist.size()) {
 				entry.setMetaData(createMetaData(uri));
+				playlistIterator=new UnlimitedListIterator(IntStream.range(0, playlist.size()).boxed().collect(Collectors.toList()));
 				HashMap<String,Object> eventData=new HashMap<>();
 				eventData.put(URI_EVENTDATA, uriObject);
 				eventData.put(INDEX_EVENTDATA, index);
@@ -261,7 +279,7 @@ public class Playlist implements PlaylistInterface {
 				e.printStackTrace();
 			}}
 		);
-		
+		playlistIterator=new UnlimitedListIterator(IntStream.range(0, playlist.size()).boxed().collect(Collectors.toList()));
 	}
 
 	/* (non-Javadoc)
@@ -384,18 +402,11 @@ public class Playlist implements PlaylistInterface {
 	@Override
 	public void setRepeat(boolean repeat) {
 		isRepeated=repeat;
+		if (playlistIterator!=null)
+			playlistIterator.setRepeated(repeat);
 		createOrUpdateConfiguration();
 	}
-	@Override
-	public boolean getRandom() {
-		return isRandomized;
-	}
-	@Override
-	public void setRandom(boolean random) {
-		isRandomized=random;
-		createOrUpdateConfiguration();
-	}
-	
+		
 	/**
 	 * This method is used to either create or update the configuration of the component
 	 */
@@ -408,6 +419,37 @@ public class Playlist implements PlaylistInterface {
 			configuration.update(map);
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
+		}
+	}
+	
+	@Override
+	public void handleEvent(Event event) {
+		if (playlist.isEmpty())
+			return;
+		String topic=event.getTopic();
+		EngineInterface engineObject = engine.get();
+		Supplier<Integer> indexSupplier=null;
+		switch (topic) {
+		case EngineInterface.FINISHED_EVENT:
+		case EngineInterface.FORWARD_EVENT:
+			indexSupplier=playlistIterator::next;
+			break;
+		case EngineInterface.BACKWARD_EVENT:
+			indexSupplier=playlistIterator::previous;
+			break;
+		default:
+			return;
+		}
+		if (null!=indexSupplier)
+			engineObject.play(playlist.get(indexSupplier.get()).getUri().toString());
+	}
+	
+	@Override
+	public void playMedia(int index) {
+		EngineInterface engineObject = engine.get();
+		if (null!=engineObject) {
+			engineObject.play(playlist.get(index).getUri().toString());
+			playlistIterator.setCurrentIndex(index);
 		}
 	}
 }

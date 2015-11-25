@@ -28,6 +28,7 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 
+import org.bragi.engine.EngineInterface;
 import org.bragi.metadata.MetaDataEnum;
 import org.bragi.metadata.MetaDataProviderInterface;
 import org.bragi.playlist.PlaylistEntry;
@@ -68,10 +69,12 @@ public class PlaylistTest {
 	private QueryParserInterface queryParser;
 	private ConfigurationAdmin configurationAdmin;
 	private Configuration config;
+	private EngineInterface engine;
 	
 	@Before
 	public void initTest() throws Exception {
 		playlist=new Playlist();
+		engine = mock(EngineInterface.class);
 		eventAdmin = mock(EventAdmin.class);
 		metaDataProvider = mock(MetaDataProviderInterface.class);
 		queryParser = mock(QueryParserInterface.class);
@@ -131,6 +134,7 @@ public class PlaylistTest {
 		playlist.setMetaDataProvider(metaDataProvider);
 		playlist.setQueryParser(queryParser);
 		playlist.setConfigAdmin(configurationAdmin);
+		playlist.setEngine(engine);
 		playlist.activate(new Hashtable<>());
 	}
 
@@ -269,20 +273,6 @@ public class PlaylistTest {
 	}
 	
 	@Test
-	public void randomTest() throws IOException {
-		Dictionary<String, Object> properties = new Hashtable<>();
-		properties.put("repeat", false);
-		properties.put("random", true);
-		playlist.setRandom(true);
-		verify(config,times(1)).update(properties);
-		Assert.assertTrue(playlist.getRandom());
-		properties.put("random", false);
-		playlist.setRandom(false);
-		verify(config,times(1)).update(properties);
-		Assert.assertFalse(playlist.getRandom());		
-	}
-	
-	@Test
 	public void shuffleTest() throws Exception {
 		URI[] uris=new URI[] {
 				URI.create(MP3_URL),
@@ -303,5 +293,27 @@ public class PlaylistTest {
 		verify(eventAdmin,times(2)).postEvent(new Event(Playlist.REMOVE_EVENT,eventData));
 		// 4 times because the file is added twice using addMedia and another two times in shuffle
 		verify(eventAdmin,times(4)).postEvent(new Event(Playlist.ADD_EVENT,eventData));
+	}
+	
+	@Test
+	public void handleForwardBackwardEventTest() throws URISyntaxException {
+		HashMap<String,URI> eventData=new HashMap<>();
+		Event event=new Event(EngineInterface.FORWARD_EVENT, eventData);
+		playlist.handleEvent(event);
+		playlist.addMedia(MP3_URL);
+		playlist.addMedia(MP3_1_URL);
+		playlist.handleEvent(event);
+		verify(engine,times(1)).play(MP3_URL);
+		playlist.handleEvent(event);
+		verify(engine,times(1)).play(MP3_1_URL);
+		event=new Event(EngineInterface.BACKWARD_EVENT, eventData);
+		playlist.handleEvent(event);
+		verify(engine,times(2)).play(MP3_URL);
+		playlist.setRepeat(true);
+		playlist.handleEvent(event);
+		verify(engine,times(2)).play(MP3_1_URL);
+		event=new Event(EngineInterface.FORWARD_EVENT, eventData);
+		playlist.handleEvent(event);
+		verify(engine,times(3)).play(MP3_URL);
 	}
 }
