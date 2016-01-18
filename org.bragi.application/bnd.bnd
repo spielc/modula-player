@@ -31,3 +31,4 @@ Private-Package: \
 	org.bragi.api;version=latest,\
 	org.eclipse.core.commands
 	
+Bundle-Activator: org.bragi.player.helpers.ModulaPlayerBundleActivator
