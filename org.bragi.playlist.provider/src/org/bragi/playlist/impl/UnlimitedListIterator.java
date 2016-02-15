@@ -23,9 +23,9 @@ public class UnlimitedListIterator {
 	private int currentIndex;
 	private boolean isRepeated;
 	
-	public UnlimitedListIterator(List<Integer> pList) {
+	public UnlimitedListIterator(List<Integer> pList, int pCurrentIndex) {
 		list=pList;
-		currentIndex=-1;
+		currentIndex=pCurrentIndex;
 		isRepeated=false;
 	}
 

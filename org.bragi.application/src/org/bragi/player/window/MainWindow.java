@@ -58,9 +58,10 @@ import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
+import org.osgi.service.event.EventHandler;
 
 @Component(property="event.topics=org/bragi/playlist/event/*",immediate = true)
-public class MainWindow extends ApplicationWindow implements EngineStateChangeListener {//, EventHandler {
+public class MainWindow extends ApplicationWindow implements EngineStateChangeListener, EventHandler {
 
 	private static final String PLAYLIST_FILEPATH = "file:///home/christoph/.bragi/Playlist/current.m3u";
 
@@ -209,12 +210,8 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 					Path playlistPath=dirPath.resolve("current.m3u");
 					playlist.get().save(playlistPath.toUri().toString());
 				}
-				if (engine.get()!=null) {
-					uiInitialized=false;
-					Bundle bundle=FrameworkUtil.getBundle(engine.get().getClass());
-					bundle.stop();
-				}
-				System.exit(0);
+				//shutdown OSGI framework
+				FrameworkUtil.getBundle(getClass()).getBundleContext().getBundle(0).stop();
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -501,8 +498,12 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 		
 	}
 
-//	@Override
-//	public void handleEvent(Event event) {
-//		playlistEventList.add(event);
-//	}
+	@Override
+	public void handleEvent(Event event) {
+		if((null != playlistWidget) && event.getTopic().equals(PlaylistInterface.INDEX_CHANGED_EVENT)) {
+			int newSongIndex=(Integer)event.getProperty(PlaylistInterface.INDEX_EVENTDATA);
+			playlistWidget.setCurrentSongIndex(newSongIndex);
+			updateUi();
+		}
+	}
 }
