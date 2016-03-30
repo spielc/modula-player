@@ -49,6 +49,7 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Slider;
+import org.modulaplayer.script.AbstractScriptEngine;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.FrameworkUtil;
 import org.osgi.service.component.annotations.Activate;
@@ -71,6 +72,7 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 	private final AtomicReference<PlaylistInterface> playlist = new AtomicReference<>();
 	private Vector<Event> playlistEventList;
 	private final AtomicReference<EventAdmin> eventAdmin = new AtomicReference<>();
+	private List<AbstractScriptEngine> scriptEngines;
 
 	private Composite container;
 	private Composite engineComposite;
@@ -133,6 +135,16 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 			});
 			currentState = EngineStateEnum.UNLOADED;
 		}
+	}
+	
+	@Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
+	public void addScriptEngine(AbstractScriptEngine scriptEngine) {
+		if (!scriptEngines.contains(scriptEngine))
+			scriptEngines.add(scriptEngine);
+	}
+	
+	public void removeScriptEngine(AbstractScriptEngine scriptEngine) {
+		scriptEngines.remove(scriptEngine);
 	}
 
 	@Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)

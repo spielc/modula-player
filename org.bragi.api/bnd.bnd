@@ -25,4 +25,5 @@ Export-Package: \
 	org.bragi.indexer,\
 	org.bragi.metadata,\
 	org.bragi.playlist,\
-	org.bragi.query
+	org.bragi.query,\
+	org.modulaplayer.script
