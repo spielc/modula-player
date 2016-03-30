@@ -85,7 +85,7 @@ public class PlaylistWidget extends Composite {
 				String row=data.toString();
 				PlaylistInterface playlist=(PlaylistInterface)playlistTableViewer.getInput();
 				List<String> lines=Arrays.asList(playlist2StringArray(playlist));
-				if (currentSongIndex==lines.indexOf(row))
+				if ((currentSongIndex-1)==lines.indexOf(row))
 					return Display.getCurrent().getSystemColor(SWT.COLOR_GRAY);
 			}
 			return super.getBackground(data);
@@ -165,9 +165,11 @@ public class PlaylistWidget extends Composite {
 
 			@Override
 			public void doubleClick(DoubleClickEvent event) {
-				currentSongIndex=playlistTable.getSelectionIndex()-1;
+				currentSongIndex=playlistTable.getSelectionIndex();
+				//currentSongIndex=playlistTable.getSelectionIndex()-1;
 				if (null!=playlist)
-					playlist.playMedia(currentSongIndex+1);
+					//playlist.playMedia(currentSongIndex+1);
+					playlist.playMedia(currentSongIndex);
 			}
 			
 		});
@@ -205,6 +207,10 @@ public class PlaylistWidget extends Composite {
 	
 	public void setEventAdmin(EventAdmin pEventAdmin) {
 		eventAdmin=pEventAdmin;
+	}
+	
+	public void setCurrentSongIndex(int newSongIndex) {
+		currentSongIndex=newSongIndex;
 	}
 	
 	public void forward() {

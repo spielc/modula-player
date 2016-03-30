@@ -30,7 +30,7 @@ public class UnlimitedListIteratorTest {
 	
 	@Before
 	public void setupTest() {
-		iterator=new UnlimitedListIterator(IntStream.range(0, LIST_SIZE).boxed().collect(Collectors.toList()));
+		iterator=new UnlimitedListIterator(IntStream.range(0, LIST_SIZE).boxed().collect(Collectors.toList()),-1);
 	}
 	
 	@Test
@@ -50,7 +50,7 @@ public class UnlimitedListIteratorTest {
 	
 	@Test(expected=IndexOutOfBoundsException.class)
 	public void nextEmptyListTest() {
-		iterator=new UnlimitedListIterator(new ArrayList<Integer>());
+		iterator=new UnlimitedListIterator(new ArrayList<Integer>(),-1);
 		Assert.assertEquals(0, iterator.next().intValue());
 	}
 	
@@ -71,7 +71,7 @@ public class UnlimitedListIteratorTest {
 	
 	@Test(expected=IndexOutOfBoundsException.class)
 	public void previousEmptyListTest() {
-		iterator=new UnlimitedListIterator(new ArrayList<Integer>());
+		iterator=new UnlimitedListIterator(new ArrayList<Integer>(),-1);
 		Assert.assertEquals(0, iterator.previous().intValue());
 	}
 	

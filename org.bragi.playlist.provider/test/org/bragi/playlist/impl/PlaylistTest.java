@@ -263,6 +263,7 @@ public class PlaylistTest {
 		Dictionary<String, Object> properties = new Hashtable<>();
 		properties.put("repeat", true);
 		properties.put("random", false);
+		properties.put("current_index", -1);
 		playlist.setRepeat(true);
 		verify(config,times(1)).update(properties);
 		Assert.assertTrue(playlist.getRepeat());

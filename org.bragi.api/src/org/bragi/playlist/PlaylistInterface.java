@@ -25,6 +25,7 @@ public interface PlaylistInterface {
 	public static final String INSERT_EVENT = "org/bragi/playlist/event/INSERTED";
 	public static final String RANDOM_CHANGED_EVENT = "org/bragi/playlist/event/RANDOM_CHANGED";
 	public static final String REPEAT_CHANGED_EVENT = "org/bragi/playlist/event/REPEAT_CHANGED";
+	public static final String INDEX_CHANGED_EVENT = "org/bragi/playlist/event/INDEX_CHANGED";
 	//various other constants
 	public static final String URI_EVENTDATA = "org/bragi/playlist/eventData/URI";
 	public static final String INDEX_EVENTDATA = "org/bragi/playlist/eventData/INDEX";

@@ -43,8 +43,11 @@ import org.bragi.playlist.PlaylistInterface;
 import org.bragi.query.QueryParserInterface;
 import org.osgi.service.cm.Configuration;
 import org.osgi.service.cm.ConfigurationAdmin;
+import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.ConfigurationPolicy;
+import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Modified;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.event.Event;
@@ -63,7 +66,7 @@ import christophedelory.playlist.SpecificPlaylistProvider;
  * @author christoph
  *
  */
-@Component(property="event.topics=org/bragi/engine/event/*",name="org.bragi.playlist.impl.Playlist")
+@Component(property="event.topics=org/bragi/engine/event/*", name="org.bragi.playlist.impl.Playlist", configurationPolicy=ConfigurationPolicy.OPTIONAL)
 public class Playlist implements PlaylistInterface, EventHandler {
 	
 	private static final String COMPONENT_NAME = "org.bragi.playlist.impl.Playlist";
@@ -77,6 +80,8 @@ public class Playlist implements PlaylistInterface, EventHandler {
 	 * String-Constants for the configuration value "random"
 	 */
 	private static final String RANDOM = "random";
+	
+	private static final String CURRENT_INDEX = "current_index";
 
 	/**
 	 * Private class which implements a PlaylistVisitor, which is used when loading a playlist to fill the playlist
@@ -137,6 +142,8 @@ public class Playlist implements PlaylistInterface, EventHandler {
 	private ConfigurationAdmin configAdmin;
 	private final AtomicReference<EngineInterface> engine=new AtomicReference<>();
 	private UnlimitedListIterator playlistIterator;
+	private int currentIndex;
+	private boolean wasPlaying;
 	
 	@Reference
 	public void setEventAdmin(EventAdmin pEventAdmin) {
@@ -179,21 +186,31 @@ public class Playlist implements PlaylistInterface, EventHandler {
 	}
 	
 	@Activate
-	void activate(Map<String,Object> map) {
+	public void activate(Map<String,Object> map) {
 		playlist=new ArrayList<>();
 		isRepeated=false;
 		isRandomized=false;
+		currentIndex=-1;
+		wasPlaying=false;
 		modified(map);
 	}
 
 	@Modified
-	void modified(Map<String,Object> map) {
+	public void modified(Map<String,Object> map) {
 		if (map.containsKey(RANDOM))
 			isRandomized = (boolean) map.get(RANDOM);
 		if (map.containsKey(REPEAT))
 			isRepeated = (boolean) map.get(REPEAT);
+		if (map.containsKey(CURRENT_INDEX)) {
+			currentIndex=(Integer)map.get(CURRENT_INDEX);
+		}
 		postBooleanEvent(isRandomized, PlaylistInterface.RANDOM_CHANGED_EVENT);
 		postBooleanEvent(isRepeated, PlaylistInterface.REPEAT_CHANGED_EVENT);
+	}
+	
+	@Deactivate
+	protected void deactivate(ComponentContext cContext, int reason) {
+		createOrUpdateConfiguration();
 	}
 	
 	/* (non-Javadoc)
@@ -207,7 +224,7 @@ public class Playlist implements PlaylistInterface, EventHandler {
 			entry.setUri(uriObject);
 			if (playlist.add(entry)) { //only post even if operation was successful
 				entry.setMetaData(createMetaData(uri));
-				playlistIterator=new UnlimitedListIterator(IntStream.range(0, playlist.size()).boxed().collect(Collectors.toList()));
+				playlistIterator=new UnlimitedListIterator(IntStream.range(0, playlist.size()).boxed().collect(Collectors.toList()), currentIndex);
 				postEvent(uriObject,PlaylistInterface.ADD_EVENT);
 			}
 		}
@@ -233,7 +250,13 @@ public class Playlist implements PlaylistInterface, EventHandler {
 	public void removeMedia(int index) {
 		if (index>=0 && index<playlist.size()) { //only do something if uri is not null and not empty
 			URI uriObject=playlist.remove(index).getUri();
-			playlistIterator=new UnlimitedListIterator(IntStream.range(0, playlist.size()).boxed().collect(Collectors.toList()));
+			if (index<=currentIndex) {
+				currentIndex--;
+				HashMap<String,Object> eventData=new HashMap<>();
+				eventData.put(INDEX_EVENTDATA, currentIndex-1);
+				eventAdmin.postEvent(new Event(PlaylistInterface.INDEX_CHANGED_EVENT,eventData));
+			}
+			playlistIterator=new UnlimitedListIterator(IntStream.range(0, playlist.size()).boxed().collect(Collectors.toList()), currentIndex);
 			postEvent(uriObject,PlaylistInterface.REMOVE_EVENT);
 		}
 	}
@@ -250,8 +273,14 @@ public class Playlist implements PlaylistInterface, EventHandler {
 			int oldSize=playlist.size();
 			playlist.add(index, entry);
 			if (oldSize!=playlist.size()) {
+				if (index<=currentIndex) {
+					currentIndex++;
+					HashMap<String,Object> eventData=new HashMap<>();
+					eventData.put(INDEX_EVENTDATA, currentIndex+1);
+					eventAdmin.postEvent(new Event(PlaylistInterface.INDEX_CHANGED_EVENT,eventData));
+				}
 				entry.setMetaData(createMetaData(uri));
-				playlistIterator=new UnlimitedListIterator(IntStream.range(0, playlist.size()).boxed().collect(Collectors.toList()));
+				playlistIterator=new UnlimitedListIterator(IntStream.range(0, playlist.size()).boxed().collect(Collectors.toList()), currentIndex);
 				HashMap<String,Object> eventData=new HashMap<>();
 				eventData.put(URI_EVENTDATA, uriObject);
 				eventData.put(INDEX_EVENTDATA, index);
@@ -279,7 +308,7 @@ public class Playlist implements PlaylistInterface, EventHandler {
 				e.printStackTrace();
 			}}
 		);
-		playlistIterator=new UnlimitedListIterator(IntStream.range(0, playlist.size()).boxed().collect(Collectors.toList()));
+		playlistIterator=new UnlimitedListIterator(IntStream.range(0, playlist.size()).boxed().collect(Collectors.toList()), currentIndex);
 	}
 
 	/* (non-Javadoc)
@@ -413,7 +442,9 @@ public class Playlist implements PlaylistInterface, EventHandler {
 	private void createOrUpdateConfiguration() {
 		try {
 			Configuration configuration = configAdmin.getConfiguration(COMPONENT_NAME, "?");
+			int actualIndex=(wasPlaying)?currentIndex-1:currentIndex;
 			Hashtable<String, Object> map = new Hashtable<>();
+			map.put(CURRENT_INDEX, actualIndex);
 			map.put(REPEAT, isRepeated);
 			map.put(RANDOM, isRandomized); 
 			configuration.update(map);
@@ -437,17 +468,26 @@ public class Playlist implements PlaylistInterface, EventHandler {
 		case EngineInterface.BACKWARD_EVENT:
 			indexSupplier=playlistIterator::previous;
 			break;
+		case EngineInterface.PLAY_EVENT:
+			wasPlaying=true;
+			break;
 		default:
 			return;
 		}
-		if (null!=indexSupplier)
-			engineObject.play(playlist.get(indexSupplier.get()).getUri().toString());
+		if (null!=indexSupplier) {
+			currentIndex = indexSupplier.get();
+			HashMap<String,Object> eventData=new HashMap<>();
+			eventData.put(INDEX_EVENTDATA, currentIndex);
+			eventAdmin.postEvent(new Event(PlaylistInterface.INDEX_CHANGED_EVENT,eventData));
+			engineObject.play(playlist.get(currentIndex).getUri().toString());
+		}
 	}
 	
 	@Override
 	public void playMedia(int index) {
 		EngineInterface engineObject = engine.get();
 		if (null!=engineObject) {
+			currentIndex=index;
 			engineObject.play(playlist.get(index).getUri().toString());
 			playlistIterator.setCurrentIndex(index);
 		}
