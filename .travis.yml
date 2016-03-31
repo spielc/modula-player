@@ -7,4 +7,4 @@ env:
 
 install: ./gradlew --version
 
-script: ./gradlew build --stacktrace
+script: ./gradlew build
