@@ -38,12 +38,13 @@ subprojects {
         }
     }
     }
+    if (bndProject.name.contains('org.modulaplayer.script.jsr223.provider')) {
+    plugins.apply 'java'
     test {
-    	testLogging {
-    	  events "failed"
-	  showStackTraces true
-	  exceptionFormat "short"
-    	}
+        useJUnit {
+          excludeCategories 'org.modulaplayer.script.jsr223.provider.util.LocalTest'
+        }
+    }
     }
   }
 }
