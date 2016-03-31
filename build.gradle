@@ -36,12 +36,14 @@ subprojects {
         useJUnit {
       	  excludeCategories 'org.bragi.engine.vlc.test.helpers.LocalTest'
         }
-	testLogging {
-	  events "failed"
+    }
+    }
+    test {
+    	testLogging {
+    	  events "failed"
 	  showStackTraces true
 	  exceptionFormat "short"
-	}
-    }
+    	}
     }
   }
 }
