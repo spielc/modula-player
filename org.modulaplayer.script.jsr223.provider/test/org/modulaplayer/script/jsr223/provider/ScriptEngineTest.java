@@ -4,14 +4,10 @@
 package org.modulaplayer.script.jsr223.provider;
 
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 
-import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Map;
-import java.util.Random;
 
 import org.bragi.engine.EngineInterface;
 import org.junit.Before;

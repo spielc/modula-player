@@ -3,12 +3,12 @@ package org.modulaplayer.script.jsr223.provider;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import javax.script.ScriptEngineManager;
 
 import org.modulaplayer.script.AbstractScriptEngine;
-import org.modulaplayer.script.EventHandler;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.ConfigurationPolicy;
@@ -45,7 +45,7 @@ public class JSR223ScriptEngine extends AbstractScriptEngine implements org.osgi
 	@Override
 	public void handleEvent(Event event) {
 		String topic=event.getTopic();
-		List<EventHandler> handlers=new ArrayList<>();
+		List<Consumer<Event>> handlers=new ArrayList<>();
 		handlers.addAll(eventHandlers.entrySet().stream().filter(entry->entry.getKey().equals(topic))
 														 .map(entry->entry.getValue().values())
 														 .flatMap(entry->entry.stream())
@@ -57,7 +57,7 @@ public class JSR223ScriptEngine extends AbstractScriptEngine implements org.osgi
 																	 .flatMap(entry->entry.stream())
 																	 .flatMap(entry->entry.stream())
 																	 .collect(Collectors.toList()));
-		handlers.forEach(handler->handler.handleEvent(event));
+		handlers.forEach(handler->handler.accept(event));
 	}
 
 	@Override
