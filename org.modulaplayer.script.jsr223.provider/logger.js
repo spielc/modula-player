@@ -9,8 +9,16 @@ function EventLogger(logger) {
 	this.eventHandler = function(event) {
 		var logMessage = event.getTopic();
 		var propertyNames = event.getPropertyNames();
+		logMessage = logMessage + "[";
 		for each (var propertyName in propertyNames) {
+			if (propertyName == "event.topics")
+				continue;
+			logMessage = logMessage + propertyName + "=" + event.getProperty(propertyName).toString() + ","
 		}
+		if (logMessage.indexOf(",")!=-1)
+			logMessage = logMessage.slice(0,-1) + "]";
+		else
+			logMessage = logMessage + "]";
 		this.logger.info(logMessage);
 	}
 }

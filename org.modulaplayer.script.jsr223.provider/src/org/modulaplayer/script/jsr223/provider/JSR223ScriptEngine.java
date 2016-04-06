@@ -17,7 +17,7 @@ import org.osgi.service.event.Event;
 /**
  * 
  */
-@Component(name="org.modulaplayer.script.JSR223ScriptEngine",property={"event.topics=*"}, configurationPolicy=ConfigurationPolicy.REQUIRE)
+@Component(name="org.modulaplayer.script.JSR223ScriptEngine", property={"event.topics=*"}, configurationPolicy=ConfigurationPolicy.REQUIRE, service={org.osgi.service.event.EventHandler.class, AbstractScriptEngine.class})
 public class JSR223ScriptEngine extends AbstractScriptEngine implements org.osgi.service.event.EventHandler {
 	
 	private javax.script.ScriptEngine scriptEngine;
