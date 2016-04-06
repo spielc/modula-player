@@ -60,7 +60,7 @@ public class VLCEngine implements EngineInterface {
 	@Modified
 	public void modified(Map<String,Object> map) {
 		if (map.containsKey(VOLUME))
-			setVolume((Integer)map.get(VOLUME));
+			setVolume(Integer.parseInt(map.get(VOLUME).toString()));
 	}
 	
 	@Deactivate
