@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 
 import org.osgi.service.event.Event;
@@ -28,6 +29,7 @@ public abstract class AbstractScriptEngine {
 	protected Map<String, String> loadedScripts;
 	protected Map<String, Map<Object, List<Consumer<Event>>>> eventHandlers;
 	protected Map<String, Object> runningScripts;
+	protected List<String> extensions;
 		
 	protected AbstractScriptEngine() {
 		loadedScripts=new HashMap<>();
@@ -64,6 +66,18 @@ public abstract class AbstractScriptEngine {
 			eventHandlersForTopic.put(obj, evtHandlers);
 			eventHandlers.put(eventTopic, eventHandlersForTopic);
 		}
+	}
+	
+	public List<String> getExtensions() {
+		return extensions;
+	}
+	
+	public Set<String> getLoadedScripts() {
+		return loadedScripts.keySet();
+	}
+	
+	public Set<String> getRunningScripts() {
+		return runningScripts.keySet();
 	}
 	
 	public void registerObject(String name, Object object) {

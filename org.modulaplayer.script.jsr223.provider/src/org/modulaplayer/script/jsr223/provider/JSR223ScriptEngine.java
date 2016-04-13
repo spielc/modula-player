@@ -26,6 +26,7 @@ public class JSR223ScriptEngine extends AbstractScriptEngine implements org.osgi
 	public void activate(Map<String,Object> map) {
 		ScriptEngineManager manager=new ScriptEngineManager();
 		scriptEngine=manager.getEngineByName(map.get("name").toString());
+		extensions=scriptEngine.getFactory().getExtensions();
 	}
 
 	@Override

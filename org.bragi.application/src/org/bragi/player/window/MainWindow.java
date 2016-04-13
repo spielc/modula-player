@@ -47,10 +47,10 @@ import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Slider;
 import org.modulaplayer.script.AbstractScriptEngine;
-import org.osgi.framework.Bundle;
 import org.osgi.framework.FrameworkUtil;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
@@ -86,6 +86,7 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 	private Slider volumeSlider;
 	private boolean uiInitialized;
 	private boolean manualTrackChange;
+	private boolean scriptDialogOpen;
 
 	private SeekWidget seekWidget;
 	private CollectionWidget collectionWidget;
@@ -140,8 +141,16 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 	
 	@Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
 	public void addScriptEngine(AbstractScriptEngine scriptEngine) {
-		if (!scriptEngines.contains(scriptEngine))
+		if (!scriptEngines.contains(scriptEngine)) {
 			scriptEngines.add(scriptEngine);
+//			try {
+//				byte[] loggerScript=Files.readAllBytes(new File("/home/christoph/git/modula-player/org.modulaplayer.script.jsr223.provider/logger.js").toPath());
+//				scriptEngine.loadScript("logger", new String(loggerScript));
+//				scriptEngine.runScript("logger");
+//			} catch (Exception e) {
+//				e.printStackTrace();
+//			}
+		}
 	}
 	
 	public void removeScriptEngine(AbstractScriptEngine scriptEngine) {
@@ -201,6 +210,8 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 		currentSongIndex = 0;
 		collections = new ArrayList<>();
 		playlistEventList=new Vector<>();
+		scriptEngines=new ArrayList<>();
+		scriptDialogOpen=false;
 	}
 
 	@Activate
@@ -375,6 +386,21 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 		playlistWidget.setPlaylist(playlist.get());
 		playlistWidget.setEngine(engine.get());
 		playlistWidget.setEventAdmin(eventAdmin.get());
+		getShell().getDisplay().addFilter(SWT.KeyDown, new Listener() {
+
+            @Override
+			public void handleEvent(org.eclipse.swt.widgets.Event e) {
+				if(!scriptDialogOpen && ((e.stateMask & SWT.CTRL) == SWT.CTRL) && (e.keyCode == 'o'))
+                {
+					scriptDialogOpen=true;
+                    ScriptDialog dialog=new ScriptDialog(getShell(), scriptEngines);
+                    dialog.setBlockOnOpen(true);
+                    dialog.open();
+                    scriptDialogOpen=false;
+                }
+			}
+        });
+		
 		return container;
 	}
 	
@@ -382,7 +408,7 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 	 * Create the actions.
 	 */
 	private void createActions() {
-		// Create the actions
+		
 	}
 
 	/**
