@@ -143,6 +143,9 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 	public void addScriptEngine(AbstractScriptEngine scriptEngine) {
 		if (!scriptEngines.contains(scriptEngine)) {
 			scriptEngines.add(scriptEngine);
+			if (null!=playlist.get()) {
+				scriptEngine.registerObject("PLAYLIST", playlist.get());
+			}
 //			try {
 //				byte[] loggerScript=Files.readAllBytes(new File("/home/christoph/git/modula-player/org.modulaplayer.script.jsr223.provider/logger.js").toPath());
 //				scriptEngine.loadScript("logger", new String(loggerScript));
@@ -194,6 +197,7 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 					playlistWidget.setPlaylist(pPlaylist);
 			});
 		}
+		scriptEngines.forEach(scriptEngine->scriptEngine.registerObject("PLAYLIST", pPlaylist));
 	}
 
 	public void unsetPlaylist(PlaylistInterface pPlaylist) {

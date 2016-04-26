@@ -58,7 +58,13 @@ public class JSR223ScriptEngine extends AbstractScriptEngine implements org.osgi
 																	 .flatMap(entry->entry.stream())
 																	 .flatMap(entry->entry.stream())
 																	 .collect(Collectors.toList()));
-		handlers.forEach(handler->handler.accept(event));
+		handlers.forEach(handler->{
+			try {
+				handler.accept(event);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		});
 	}
 
 	@Override
