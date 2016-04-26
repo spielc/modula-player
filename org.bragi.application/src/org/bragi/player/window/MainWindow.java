@@ -146,6 +146,7 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 			if (null!=playlist.get()) {
 				scriptEngine.registerObject("PLAYLIST", playlist.get());
 			}
+			scriptEngine.registerObject("MetaDataEnumClass", org.bragi.metadata.MetaDataEnum.class);
 //			try {
 //				byte[] loggerScript=Files.readAllBytes(new File("/home/christoph/git/modula-player/org.modulaplayer.script.jsr223.provider/logger.js").toPath());
 //				scriptEngine.loadScript("logger", new String(loggerScript));
