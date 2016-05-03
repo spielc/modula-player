@@ -2,6 +2,7 @@ var getTokenURL="http://ws.audioscrobbler.com/2.0/?method=auth.gettoken&api_key=
 var authURL="http://www.last.fm/api/auth/?api_key=bef50d03aa4fa431554f3bac85147580&token=$token";
 var sessionURL="";
 var MetaDataEnum=MetaDataEnumClass.static;
+var sk="";
 // if ~/.bragi/Data/lastfm.sk doesn't exist
 //	1. get new token using getTokenURL
 //	2. request authentication from user using authURL replacing $token with the token retrieved in 1.
@@ -43,7 +44,7 @@ function scrobble(artist, track, timestamp) {
 	var requestData=new java.util.HashMap();
 	requestData.put("api_key", "bef50d03aa4fa431554f3bac85147580");
 	requestData.put("method", "track.scrobble");
-	requestData.put("sk", "2b19d6abdccc11a6825bde6ba305e16c");
+	requestData.put("sk", sk);
 	requestData.put("artist", artist);
 	requestData.put("track", track);
 	requestData.put("timestamp", timestamp);
@@ -119,6 +120,15 @@ function eventHandler(event) {
 		//print(artist+":"+track+":"+currentTime);
 		scrobble(artist, track, currentTime);
 	}    
+}
+
+var skFile=new java.io.File(java.lang.System.getProperty("user.home")+"/.bragi/Data/lastfm.sk");
+if (skFile.exists()) {
+	var skStream=java.nio.file.Files.newInputStream(skFile.toPath());
+	var skData=JSON.parse(read(skStream));
+	sk=skData.session.key;
+} else {
+	// TODO request new session-key
 }
 
 //var currentTime = java.time.Clock.tickSeconds(java.time.Clock.systemUTC().getZone());
