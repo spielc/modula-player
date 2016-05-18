@@ -11,8 +11,6 @@
  */
 package org.bragi.player.window;
 
-import java.io.File;
-import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -63,8 +61,6 @@ import org.osgi.service.event.EventHandler;
 
 @Component(property="event.topics=org/bragi/playlist/event/*",immediate = true)
 public class MainWindow extends ApplicationWindow implements EngineStateChangeListener, EventHandler {
-
-	private static final String PLAYLIST_FILEPATH = "file:///home/christoph/.bragi/Playlist/current.m3u";
 
 	private Thread thread;
 
@@ -185,17 +181,16 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 
 	@Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
 	public void setPlaylist(PlaylistInterface pPlaylist) {
-		if (pPlaylist!=null) {
+		if (pPlaylist!=null)
 			playlist.set(pPlaylist);
-			URI uri=URI.create(PLAYLIST_FILEPATH);
-			File playlistPath=new File(uri);
-			if (playlistPath.exists())
-				playlist.get().load(PLAYLIST_FILEPATH);
-		}
 		if (uiInitialized) {
 			getShell().getDisplay().asyncExec(() -> {
-				if (playlistWidget != null)
+				if (playlistWidget != null) {
+					Path playlistPath=Paths.get(playlistWidget.getPlaylistPath());
+					if (Files.exists(playlistPath))
+						playlist.get().load(playlistPath.toUri().toString());
 					playlistWidget.setPlaylist(pPlaylist);
+				}
 			});
 		}
 		scriptEngines.forEach(scriptEngine->scriptEngine.registerObject("PLAYLIST", pPlaylist));
@@ -232,10 +227,9 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 				open();
 				Display.getCurrent().dispose();
 				if (playlist!=null) {
-					Path dirPath=Paths.get("/home/christoph/.bragi/Playlist/");
-					if (!Files.exists(dirPath))
-						Files.createDirectory(dirPath);
-					Path playlistPath=dirPath.resolve("current.m3u");
+					Path playlistPath=Paths.get(playlistWidget.getPlaylistPath());
+					if (!Files.exists(playlistPath.getParent()))
+						Files.createDirectory(playlistPath.getParent());
 					playlist.get().save(playlistPath.toUri().toString());
 				}
 				//shutdown OSGI framework

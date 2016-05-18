@@ -11,6 +11,7 @@
  */
 package org.bragi.player.widgets;
 
+import java.io.File;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Iterator;
@@ -26,6 +27,7 @@ import org.bragi.player.helpers.QueryHelpers;
 import org.bragi.player.statemachines.EngineStateEnum;
 import org.bragi.playlist.PlaylistEntry;
 import org.bragi.playlist.PlaylistInterface;
+import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.viewers.ColumnLabelProvider;
 import org.eclipse.jface.viewers.DoubleClickEvent;
 import org.eclipse.jface.viewers.IDoubleClickListener;
@@ -46,6 +48,7 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MenuItem;
 import org.eclipse.swt.widgets.Table;
@@ -64,6 +67,7 @@ public class PlaylistWidget extends Composite {
 	private EngineInterface engine;
 	private UriDragListener dragListener;
 	private MenuItem mntmRepeat;
+	private String playlistPath;
 	
 	private class PlaylistTableLabelProvider extends ColumnLabelProvider implements ITableLabelProvider {
 		
@@ -120,6 +124,7 @@ public class PlaylistWidget extends Composite {
 	public PlaylistWidget(Composite parent, int style) {
 		super(parent, style);
 		setLayout(new FillLayout());
+		playlistPath=System.getProperty("user.home")+"/.bragi/Playlist/current.m3u";
 		currentSongIndex=-1;
 		playlistTableViewer = new TableViewer(this, SWT.BORDER | SWT.FULL_SELECTION | SWT.MULTI);
 		dragListener=new UriDragListener(this::getPlaylistTableViewerDragSourceEventData);
@@ -152,6 +157,41 @@ public class PlaylistWidget extends Composite {
 		mntmRepeat.addListener(SWT.Selection, event -> {
 			playlist.setRepeat(mntmRepeat.getSelection());
 		});
+		
+		MenuItem mntmSave = new MenuItem(menu_1, SWT.NONE);
+		mntmSave.setText("Save");
+		mntmSave.addListener(SWT.Selection, event -> {
+			FileDialog dialog=new FileDialog(getShell(), SWT.SAVE|SWT.SINGLE);
+			String fileName=dialog.open();
+			if (null!=fileName) {
+				File f=new File(fileName);
+				playlist.save(f.toURI().toString());
+				
+				if (f.exists())
+					MessageDialog.openInformation(getShell(), "Success...", "Saving successfully finished!");
+				else
+					MessageDialog.openError(getShell(), "Failed...", "Saving failed!");
+			}
+		});
+		
+		MenuItem mntmLoad = new MenuItem(menu_1, SWT.NONE);
+		mntmLoad.setText("Load");
+		mntmLoad.addListener(SWT.Selection, event -> {
+			FileDialog dialog=new FileDialog(getShell(), SWT.OPEN|SWT.SINGLE);
+			String fileName=dialog.open();
+			if (null!=fileName) {
+				File f=new File(fileName);
+				playlist.load(f.toURI().toString());
+				if (playlist2StringArray(playlist).length>0) {
+					MessageDialog.openInformation(getShell(), "Success...", "Playlist successfully loaded!");
+					playlistTableViewer.refresh();
+					playlistPath=fileName;
+				}
+				else
+					MessageDialog.openError(getShell(), "Failed...", "Loading of playlist failed!");
+			}
+		});
+		
 		
 		for (MetaDataEnum metaData : EnumSet.of(MetaDataEnum.TITLE, MetaDataEnum.ARTIST, MetaDataEnum.ALBUM)) {
 			TableViewerColumn tableViewerColumn = new TableViewerColumn(playlistTableViewer, SWT.NONE);
@@ -223,6 +263,10 @@ public class PlaylistWidget extends Composite {
 
 	public void setCurrentState(EngineStateEnum currentState) {
 		this.currentState = currentState;
+	}
+	
+	public String getPlaylistPath() {
+		return playlistPath;
 	}
 
 	public void refresh() {
