@@ -16,7 +16,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.Vector;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.bragi.collection.CollectionInterface;
@@ -89,36 +92,21 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 	private PlaylistWidget playlistWidget;
 	private SashForm sashForm;
 	private Composite composite;
+	private Timer playlistChangeTimer;
+	private AtomicInteger playlistChangeCount;
 	
 	@Reference
 	public void setEventAdmin(EventAdmin pEventAdmin) {
 		eventAdmin.set(pEventAdmin);
-		if (uiInitialized) {
-			getShell().getDisplay().asyncExec(() -> {
-				if (playlistWidget != null)
-					playlistWidget.setEventAdmin(pEventAdmin);
-			});
-		}
 	}
 	
 	public void unsetEventAdmin(EventAdmin pEventAdmin) {
-		if (eventAdmin.compareAndSet(pEventAdmin, null) && uiInitialized) {
-			getShell().getDisplay().asyncExec(() -> {
-				if (playlistWidget != null)
-					playlistWidget.setEventAdmin(null);
-			});
-		}
+		eventAdmin.compareAndSet(pEventAdmin, null);
 	}
 
 	@Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
 	public void setEngine(EngineInterface pEngine) {
 		engine.set(pEngine);
-		if (uiInitialized) {
-			getShell().getDisplay().asyncExec(() -> {
-				if (playlistWidget != null)
-					playlistWidget.setEngine(pEngine);
-			});
-		}
 		currentState = EngineStateEnum.LOADED;
 		EventAdmin eventAdminObject=eventAdmin.get();
 		if (eventAdminObject!=null)
@@ -126,13 +114,8 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 	}
 
 	public void unsetEngine(EngineInterface pEngine) {
-		if (engine.compareAndSet(pEngine, null) && uiInitialized) {
-			getShell().getDisplay().asyncExec(() -> {
-				if (playlistWidget != null)
-					playlistWidget.setEngine(null);
-			});
+		if (engine.compareAndSet(pEngine, null) && uiInitialized)
 			currentState = EngineStateEnum.UNLOADED;
-		}
 	}
 	
 	@Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
@@ -189,7 +172,7 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 					Path playlistPath=Paths.get(playlistWidget.getPlaylistPath());
 					if (Files.exists(playlistPath))
 						playlist.get().load(playlistPath.toUri().toString());
-					playlistWidget.setPlaylist(pPlaylist);
+					//playlistWidget.setPlaylist(pPlaylist);
 				}
 			});
 		}
@@ -207,6 +190,8 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 	public MainWindow() {
 		super(null);
 		uiInitialized = false;
+		playlistChangeTimer=new Timer(true);
+		playlistChangeCount=new AtomicInteger(0);
 		currentSongIndex = 0;
 		collections = new ArrayList<>();
 		playlistEventList=new Vector<>();
@@ -220,7 +205,6 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 		addCoolBar(SWT.FLAT);
 		addMenuBar();
 		addStatusLine();
-		//start gui-thread
 		Runnable mainLoop = () -> {
 			try {
 				setBlockOnOpen(true);
@@ -266,7 +250,6 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 								sashForm.setSize(639, 43);
 								collectionWidget = new CollectionWidget(sashForm, SWT.NONE);
 								playlistWidget = new PlaylistWidget(sashForm, SWT.NONE);
-								playlistWidget.setEngine(engine.get());
 								sashForm.setWeights(new int[] {1, 1});
 							}
 							engineComposite = new Composite(composite, SWT.NONE);
@@ -382,9 +365,6 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 		// make sure the sub-widgets are correctly initialized
 		uiInitialized=true;
 		collections.forEach(this::addCollection);
-		playlistWidget.setPlaylist(playlist.get());
-		playlistWidget.setEngine(engine.get());
-		playlistWidget.setEventAdmin(eventAdmin.get());
 		getShell().getDisplay().addFilter(SWT.KeyDown, new Listener() {
 
             @Override
@@ -537,10 +517,30 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 
 	@Override
 	public void handleEvent(Event event) {
-		if((null != playlistWidget) && event.getTopic().equals(PlaylistInterface.INDEX_CHANGED_EVENT)) {
-			int newSongIndex=(Integer)event.getProperty(PlaylistInterface.INDEX_EVENTDATA);
-			playlistWidget.setCurrentSongIndex(newSongIndex);
-			updateUi();
+		if(null != playlistWidget) {
+			switch(event.getTopic()) {
+			case PlaylistInterface.INDEX_CHANGED_EVENT:
+				int newSongIndex=(Integer)event.getProperty(PlaylistInterface.INDEX_EVENTDATA);
+				playlistWidget.setCurrentSongIndex(newSongIndex);
+				updateUi();
+				break;
+			case PlaylistInterface.ADD_EVENT:
+			case PlaylistInterface.REMOVE_EVENT:
+			case PlaylistInterface.INSERT_EVENT:
+				playlistChangeCount.incrementAndGet();
+				playlistChangeTimer.schedule(new TimerTask() {
+					@Override
+					public void run() {
+						int changeCount = playlistChangeCount.decrementAndGet();
+						if (null!=playlistWidget && changeCount==0) {
+							playlistWidget.playlist2StringList(playlist.get());
+						}
+					}
+				}, 500);
+				break;
+			}
+			// && event.getTopic().equals(PlaylistInterface.INDEX_CHANGED_EVENT)
+			
 		}
 	}
 }

@@ -12,14 +12,13 @@
 package org.bragi.player.widgets;
 
 import java.io.File;
-import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-import org.bragi.engine.EngineInterface;
 import org.bragi.metadata.MetaDataEnum;
 import org.bragi.player.dnd.UriDragListener;
 import org.bragi.player.dnd.UriDropAdapter;
@@ -28,15 +27,14 @@ import org.bragi.player.statemachines.EngineStateEnum;
 import org.bragi.playlist.PlaylistEntry;
 import org.bragi.playlist.PlaylistInterface;
 import org.eclipse.jface.dialogs.MessageDialog;
+import org.eclipse.jface.viewers.ArrayContentProvider;
 import org.eclipse.jface.viewers.ColumnLabelProvider;
 import org.eclipse.jface.viewers.DoubleClickEvent;
 import org.eclipse.jface.viewers.IDoubleClickListener;
-import org.eclipse.jface.viewers.IStructuredContentProvider;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.ITableLabelProvider;
 import org.eclipse.jface.viewers.TableViewer;
 import org.eclipse.jface.viewers.TableViewerColumn;
-import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.TextTransfer;
@@ -53,18 +51,15 @@ import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MenuItem;
 import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableColumn;
-import org.osgi.service.event.EventAdmin;
 
 public class PlaylistWidget extends Composite {
 	
 	private int currentSongIndex;
 	private EngineStateEnum currentState;
-	private EventAdmin eventAdmin;
 	private Table playlistTable;
 	private TableViewer playlistTableViewer;
 	private PlaylistInterface playlist;
 	private UriDropAdapter dropAdapter;
-	private EngineInterface engine;
 	private UriDragListener dragListener;
 	private MenuItem mntmRepeat;
 	private String playlistPath;
@@ -87,34 +82,13 @@ public class PlaylistWidget extends Composite {
 		public Color getBackground(Object data) {
 			if ((currentState==EngineStateEnum.PLAYING) || (currentState==EngineStateEnum.PAUSED)) {
 				String row=data.toString();
-				PlaylistInterface playlist=(PlaylistInterface)playlistTableViewer.getInput();
-				List<String> lines=Arrays.asList(playlist2StringArray(playlist));
-				if ((currentSongIndex-1)==lines.indexOf(row))
+				List<String> plist=(List<String>)playlistTableViewer.getInput();
+				if ((currentSongIndex-1)==plist.indexOf(row))
 					return Display.getCurrent().getSystemColor(SWT.COLOR_GRAY);
 			}
 			return super.getBackground(data);
 		}
 	}
-	
-	private class PlaylistTableContentProvider implements IStructuredContentProvider {
-
-		  @Override
-		  public Object[] getElements(Object inputElement) {
-			  PlaylistInterface playlist=(PlaylistInterface)inputElement;
-			  Object[] lines = playlist2StringArray(playlist);
-			  return lines;
-		  }
-
-		  @Override
-		  public void dispose() {
-		    
-		  }
-
-		  @Override
-		  public void inputChanged(Viewer viewer, Object oldInput, Object newInput) {
-		  }
-
-		} 
 
 	/**
 	 * Create the composite.
@@ -182,13 +156,18 @@ public class PlaylistWidget extends Composite {
 			if (null!=fileName) {
 				File f=new File(fileName);
 				playlist.load(f.toURI().toString());
-				if (playlist2StringArray(playlist).length>0) {
-					MessageDialog.openInformation(getShell(), "Success...", "Playlist successfully loaded!");
-					playlistTableViewer.refresh();
-					playlistPath=fileName;
-				}
-				else
-					MessageDialog.openError(getShell(), "Failed...", "Loading of playlist failed!");
+				//TODO currently disabled
+//				try {
+//					if (!playlistFuture.get().isEmpty()) {
+//						MessageDialog.openInformation(getShell(), "Success...", "Playlist successfully loaded!");
+//						playlistTableViewer.refresh();
+//						playlistPath=fileName;
+//					}
+//					else
+//						MessageDialog.openError(getShell(), "Failed...", "Loading of playlist failed!");
+//				} catch (Exception e) {
+//					MessageDialog.openError(getShell(), "Failed...", "Loading of playlist failed!");
+//				}
 			}
 		});
 		
@@ -200,15 +179,13 @@ public class PlaylistWidget extends Composite {
 			tblclmnExamplecolumn.setText(metaData.name());
 		}
 		playlistTableViewer.setLabelProvider(new PlaylistTableLabelProvider());
-		playlistTableViewer.setContentProvider(new PlaylistTableContentProvider());
+		playlistTableViewer.setContentProvider(new ArrayContentProvider());
 		playlistTableViewer.addDoubleClickListener(new IDoubleClickListener() {
 
 			@Override
 			public void doubleClick(DoubleClickEvent event) {
 				currentSongIndex=playlistTable.getSelectionIndex();
-				//currentSongIndex=playlistTable.getSelectionIndex()-1;
 				if (null!=playlist)
-					//playlist.playMedia(currentSongIndex+1);
 					playlist.playMedia(currentSongIndex);
 			}
 			
@@ -231,24 +208,7 @@ public class PlaylistWidget extends Composite {
 			
 		});
 	}
-	
-	public void setPlaylist(PlaylistInterface pPlaylist) {
-		playlist=pPlaylist;
-		playlistTableViewer.setInput(pPlaylist);
-		playlistTableViewer.refresh();
-		if (playlist!=null) {
-			mntmRepeat.setSelection(playlist.getRepeat());
-		}
-	}
-	
-	public void setEngine(EngineInterface pEngine) {
-		engine=pEngine;
-	}
-	
-	public void setEventAdmin(EventAdmin pEventAdmin) {
-		eventAdmin=pEventAdmin;
-	}
-	
+		
 	public void setCurrentSongIndex(int newSongIndex) {
 		currentSongIndex=newSongIndex;
 	}
@@ -278,26 +238,29 @@ public class PlaylistWidget extends Composite {
 		// Disable the check that prevents subclassing of SWT components
 	}
 
-	private static String[] playlist2StringArray(PlaylistInterface playlist) {
-		List<PlaylistEntry> playlistEntries = playlist.filter("SELECT ALBUM,ARTIST,TITLE");
-		final AtomicInteger i=new AtomicInteger(-1);
-		String[] lines=playlistEntries.stream().map(entry->(i.incrementAndGet())+";;URI='"+entry.getUri().toString()+"'"+entry.getMetaData().entrySet().stream().map(metaData->";;"+metaData.getKey().name()+"='"+metaData.getValue()+"'").collect(Collectors.joining())).toArray(String[]::new);
-		return lines;
+	public void playlist2StringList(PlaylistInterface playlist) {
+		if (null!=playlist) {
+			CompletableFuture.supplyAsync(() -> {
+				List<PlaylistEntry> playlistEntries = playlist.filter("SELECT ALBUM,ARTIST,TITLE");
+				final AtomicInteger i=new AtomicInteger(-1);
+				return playlistEntries.stream().map(entry->(i.incrementAndGet())+";;URI='"+entry.getUri().toString()+"'"+entry.getMetaData().entrySet().stream().map(metaData->";;"+metaData.getKey().name()+"='"+metaData.getValue()+"'").collect(Collectors.joining())).collect(Collectors.toList());
+			}).thenAccept(plist-> {
+				getDisplay().asyncExec(() -> {
+					playlistTableViewer.setInput(plist);
+					playlistTableViewer.refresh();
+				});
+			});
+		}
 	}
 	
 	private String getPlaylistTableViewerDragSourceEventData() {
 		String retValue="";
 		if (playlist!=null) {
-			//List<PlaylistEntry> playlistEntries = playlist.filter("*", MetaDataEnum.values());
 			final AtomicInteger i=new AtomicInteger(-1);
-			//List<String> lines=playlistEntries.stream().map(entry->(i.incrementAndGet())+";;URI='"+entry.getUri().toString()+"'"+entry.getMetaData().entrySet().stream().map(metaData->";;"+metaData.getKey().name()+"='"+metaData.getValue()+"'").collect(Collectors.joining())).collect(Collectors.toList());
 			IStructuredSelection selection = (IStructuredSelection) playlistTableViewer.getSelection();
 			Iterator selectionIterator=selection.iterator();
-			//i.set(-1);
 			while (selectionIterator.hasNext()) {
 				Object selectedObject=selectionIterator.next();
-				//int index=lines.indexOf(selectedObject);
-				//playlist.removeMedia(index-i.incrementAndGet());
 				retValue+=selectedObject.toString()+"\n";
 			}
 		}
