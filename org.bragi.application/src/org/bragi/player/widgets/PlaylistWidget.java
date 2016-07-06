@@ -208,6 +208,23 @@ public class PlaylistWidget extends Composite {
 			
 		});
 	}
+	
+	public void setPlaylist(PlaylistInterface pPlaylist) {
+		playlist=pPlaylist;
+		dropAdapter.setPlaylist(pPlaylist);
+		if (null!=playlist) {
+			CompletableFuture.supplyAsync(() -> {
+				List<PlaylistEntry> playlistEntries = playlist.filter("SELECT ALBUM,ARTIST,TITLE");
+				final AtomicInteger i=new AtomicInteger(-1);
+				return playlistEntries.stream().map(entry->(i.incrementAndGet())+";;URI='"+entry.getUri().toString()+"'"+entry.getMetaData().entrySet().stream().map(metaData->";;"+metaData.getKey().name()+"='"+metaData.getValue()+"'").collect(Collectors.joining())).collect(Collectors.toList());
+			}).thenAccept(plist-> {
+				getDisplay().asyncExec(() -> {
+					playlistTableViewer.setInput(plist);
+					playlistTableViewer.refresh();
+				});
+			});
+		}
+	}
 		
 	public void setCurrentSongIndex(int newSongIndex) {
 		currentSongIndex=newSongIndex;
@@ -238,21 +255,6 @@ public class PlaylistWidget extends Composite {
 		// Disable the check that prevents subclassing of SWT components
 	}
 
-	public void playlist2StringList(PlaylistInterface playlist) {
-		if (null!=playlist) {
-			CompletableFuture.supplyAsync(() -> {
-				List<PlaylistEntry> playlistEntries = playlist.filter("SELECT ALBUM,ARTIST,TITLE");
-				final AtomicInteger i=new AtomicInteger(-1);
-				return playlistEntries.stream().map(entry->(i.incrementAndGet())+";;URI='"+entry.getUri().toString()+"'"+entry.getMetaData().entrySet().stream().map(metaData->";;"+metaData.getKey().name()+"='"+metaData.getValue()+"'").collect(Collectors.joining())).collect(Collectors.toList());
-			}).thenAccept(plist-> {
-				getDisplay().asyncExec(() -> {
-					playlistTableViewer.setInput(plist);
-					playlistTableViewer.refresh();
-				});
-			});
-		}
-	}
-	
 	private String getPlaylistTableViewerDragSourceEventData() {
 		String retValue="";
 		if (playlist!=null) {

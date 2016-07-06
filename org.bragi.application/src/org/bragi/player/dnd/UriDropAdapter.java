@@ -34,6 +34,7 @@ import org.eclipse.swt.dnd.TransferData;
 public class UriDropAdapter extends ViewerDropAdapter {
 	
 	private TableViewer viewer;
+	private PlaylistInterface playlist;
 	
 	public UriDropAdapter(TableViewer pViewer) {
 		super(pViewer);
@@ -56,7 +57,6 @@ public class UriDropAdapter extends ViewerDropAdapter {
 	public boolean performDrop(Object data) {
 		System.out.println("performDrop");
 		String droppedData=data.toString();
-		PlaylistInterface playlist=(PlaylistInterface) viewer.getInput();
 		if (playlist!=null) {
 			List<PlaylistEntry> playlistEntries = playlist.filter("SELECT *");
 			int location = getCurrentLocation();
@@ -182,6 +182,8 @@ public class UriDropAdapter extends ViewerDropAdapter {
 		event.detail = DND.DROP_COPY; // before or after call to super
 	}
 	
-	
+	public void setPlaylist(PlaylistInterface pPlaylistInterface) {
+		playlist=pPlaylistInterface;
+	}
 		
 }

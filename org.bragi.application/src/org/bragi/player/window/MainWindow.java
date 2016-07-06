@@ -533,7 +533,7 @@ public class MainWindow extends ApplicationWindow implements EngineStateChangeLi
 					public void run() {
 						int changeCount = playlistChangeCount.decrementAndGet();
 						if (null!=playlistWidget && changeCount==0) {
-							playlistWidget.playlist2StringList(playlist.get());
+							playlistWidget.setPlaylist(playlist.get());
 						}
 					}
 				}, 500);
